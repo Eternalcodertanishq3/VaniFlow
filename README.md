@@ -2,7 +2,12 @@
 
 **Production-grade multilingual async dubbing pipeline** supporting 11 Indian languages.
 
-> Transcribe → Translate → Synthesize → Stitch — fully async, with provider fallback and structured observability.
+> Transcribe → Translate → Synthesize → Stitch — fully async, with emotion preservation, quality control, and production observability.
+
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![Tests](https://img.shields.io/badge/tests-98%20passed-brightgreen.svg)](#-running-tests)
+[![Version](https://img.shields.io/badge/version-2.0.0-orange.svg)](pyproject.toml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ---
 
@@ -11,15 +16,22 @@
 ```mermaid
 graph LR
     A[🎬 Input Video/Audio] --> B[Audio Extractor]
-    B --> C[Transcription]
-    C --> D[Translation]
-    D --> E[Text-to-Speech]
-    E --> F[Audio Stitcher]
-    F --> G[🔊 Dubbed Audio]
+    B --> B2[🎵 Ambient Separator]
+    B2 --> C[Transcription]
+    C --> C2[✂️ Boundary Optimizer]
+    C2 --> D[Translation - Batch]
+    D --> D3[🔄 Back-Translation QC]
+    D3 --> E[Text-to-Speech]
+    E --> E4[😊 Emotion Injection]
+    E4 --> E5[🗣️ Pronunciation Fix]
+    E5 --> F[QC Validation]
+    F --> G[Audio Stitcher]
+    G --> G2[🎵 Ambient Remix]
+    G2 --> H[🔊 Dubbed Audio]
 
     subgraph Transcription Providers
         C --> C1[faster-whisper Local]
-        C --> C2[AssemblyAI Cloud]
+        C --> C3[AssemblyAI Cloud]
     end
 
     subgraph Translation Providers
@@ -34,15 +46,31 @@ graph LR
     end
 
     subgraph Infrastructure
-        H[(Redis Cache)]
-        I[📊 Structlog JSON]
+        I[(Redis Cache + Job Store)]
+        J[📊 Structlog JSON]
+        K[📈 Prometheus Metrics]
     end
 
-    D -.->|cache check| H
-    C -.->|logs| I
-    D -.->|logs| I
-    E -.->|logs| I
+    D -.->|cache check| I
+    C -.->|logs| J
+    D -.->|logs| J
+    E -.->|logs| J
+    F -.->|metrics| K
 ```
+
+---
+
+## ✨ What Makes VaaniFlow Unique
+
+Most dubbing pipelines just translate words. **VaaniFlow preserves the soul of the original.**
+
+| Feature | What It Does | Why It Matters |
+|---------|-------------|----------------|
+| 😊 **EmotionPreserver** | Detects pitch, energy, tempo from original audio → injects speaking rate + pitch into TTS | Dubbed audio *feels* the same — angry stays angry, sad stays sad |
+| 🔄 **BackTranslationQualityScorer** | Back-translates to source → BLEU score → auto-retries with alt provider if quality fails | Catches hallucinated/broken translations before they reach TTS |
+| ✂️ **SmartSegmentBoundaryOptimizer** | Merges fragmented Whisper segments using spaCy sentence tokenization | "The quick brown fox" + "jumped over" → one segment = better translation |
+| 🗣️ **IndianNamePronunciationCorrector** | 40+ Indian names/places/brands → phonetic hints before TTS | "Bangalore" → "Baanga-lore" so TTS pronounces it correctly |
+| 🎵 **AmbientAudioPreserver** | Spectral subtraction separates background audio → re-layers after dubbing | Background music/ambient sounds survive the dubbing process |
 
 ---
 
@@ -52,8 +80,8 @@ graph LR
 
 ```bash
 # Clone and configure
-git clone https://github.com/your-username/vaaniflow.git
-cd vaaniflow
+git clone https://github.com/Eternalcodertanishq3/VaniFlow.git
+cd VaniFlow
 cp .env.example .env
 # Edit .env with your API keys
 
@@ -70,8 +98,11 @@ python -m venv venv
 venv\Scripts\activate  # Windows
 # source venv/bin/activate  # Linux/Mac
 
-# Install dependencies
+# Install dependencies (includes ML packages)
 pip install -e ".[dev]"
+
+# Download spaCy model for boundary optimization
+python -m spacy download en_core_web_sm
 
 # Start the server
 uvicorn api.main:app --reload --port 8000
@@ -81,7 +112,7 @@ uvicorn api.main:app --reload --port 8000
 
 - **Python 3.11+**
 - **ffmpeg** — required for audio extraction ([download](https://ffmpeg.org/download.html))
-- **Redis** — optional, falls back to in-memory cache
+- **Redis** — optional, falls back to in-memory for both cache and job store
 
 ---
 
@@ -127,12 +158,36 @@ curl http://localhost:8000/jobs/{job_id}
 curl -O http://localhost:8000/jobs/{job_id}/download
 ```
 
-### Health Check
+### Health & Observability
 
 ```bash
+# Health checks
 curl http://localhost:8000/health/
 curl http://localhost:8000/health/ready
+
+# Prometheus metrics
+curl http://localhost:8000/metrics
 ```
+
+---
+
+## 📈 Production Observability
+
+VaaniFlow exposes a `/metrics` endpoint compatible with **Prometheus + Grafana**.
+
+| Metric | Type | Description |
+|--------|------|-------------|
+| `vaaniflow_jobs_total` | Counter | Total jobs by status (completed/failed) |
+| `vaaniflow_active_jobs` | Gauge | Currently running pipeline jobs |
+| `vaaniflow_pipeline_stage_duration_seconds` | Histogram | Duration per pipeline stage (extract, transcribe, translate, etc.) |
+| `vaaniflow_translation_cache_hits_total` | Counter | Translation cache hits |
+| `vaaniflow_translation_cache_misses_total` | Counter | Translation cache misses |
+| `vaaniflow_provider_errors_total` | Counter | Provider errors by type |
+| `vaaniflow_tts_audio_bytes` | Histogram | TTS output size per provider |
+| `vaaniflow_qc_segment_failures_total` | Counter | QC failures by reason (silence/length/size) |
+| `vaaniflow_emotion_detections_total` | Counter | Emotion detections by label |
+| `vaaniflow_back_translation_bleu_scores` | Histogram | BLEU score distribution |
+| `vaaniflow_back_translation_retries_total` | Counter | Translation retries due to low quality |
 
 ---
 
@@ -157,7 +212,7 @@ curl http://localhost:8000/health/ready
 ## 🔌 Provider Comparison
 
 | Feature | Sarvam AI | ElevenLabs | gTTS (Fallback) |
-|---------|-----------|------------|-----------------|
+|---------|-----------|------------|-----------------| 
 | **Quality** | ⭐⭐⭐⭐⭐ (Indian langs) | ⭐⭐⭐⭐⭐ (English) | ⭐⭐⭐ |
 | **Cost** | API key required | API key required | **Free** |
 | **Latency** | ~500ms | ~800ms | ~300ms |
@@ -183,8 +238,17 @@ Sarvam's JD specifically asks to *"distinguish rate limits from auth errors from
 - `ProviderServerError` → retry with fixed wait
 - `ProviderTimeoutError` → retry once, then fallback
 
-### Why Redis Cache?
-Translation API calls are expensive and often repeated (same phrases across jobs). Redis caching with 24h TTL dramatically reduces costs. Falls back to in-memory dict if Redis is unavailable.
+### Why Batch Translation?
+Phase 1 called `translate()` N times (one per segment). Phase 2 calls `translate_batch()` **once** with all cache-miss texts. Google's API supports multi-`q` params, so N segments = 1 API call. Sarvam falls back to sequential calls since their API is single-text.
+
+### Why Back-Translation Quality Scoring?
+Translation APIs can hallucinate, especially with short segments or code-mixed text. Back-translating and computing BLEU catches these silently. If BLEU < 0.30, the segment is auto-retried with an alternate provider — no human intervention needed.
+
+### Why Emotion Preservation?
+Standard dubbing loses emotional tone. We extract pitch (F0), energy (RMS), and tempo from the original audio using librosa, classify emotion with rule-based prosodic features, and inject corresponding `speaking_rate` and `pitch` into the TTS request. The result: angry speech stays angry, sad stays sad.
+
+### Why Redis for Job Persistence?
+Phase 1 used `dict[str, DubbingJob]` — jobs vanished on server restart. Phase 2 uses `DubbingJobRepository` backed by Redis with 7-day TTL. Falls back to in-memory if Redis is unavailable, so dev experience stays frictionless.
 
 ### Why Concurrent TTS?
 `asyncio.gather` synthesizes all segments in parallel instead of sequentially, giving **3–4x throughput** improvement for multi-segment audio.
@@ -197,7 +261,7 @@ JSON-structured logging with `contextvars` means every log event in a pipeline r
 ## 🧪 Running Tests
 
 ```bash
-# All tests
+# All tests (98 tests)
 pytest -v
 
 # Unit tests only
@@ -210,43 +274,143 @@ pytest tests/integration/ -v
 pytest --cov=vaaniflow --cov=api -v
 ```
 
+**Test breakdown:**
+
+| Suite | Tests | Coverage |
+|-------|-------|----------|
+| QC Pipeline | 7 | Silence ratio, length ratio, min bytes, mixed segments |
+| Emotion Detection | 9 | Neutral fallback, classification rules, TTS param mapping |
+| Back-Translation | 10 | BLEU scoring, threshold, short-text skip, provider errors |
+| Boundary Optimizer | 5 | Merging, gap constraint, word limit, spaCy unavailable |
+| Pronunciation | 11 | Lexicon substitution, case-insensitive, runtime add/remove |
+| Ambient Audio | 6 | Separation, remix, scipy unavailable, error handling |
+| Job Repository | 8 | CRUD operations, Redis fallback |
+| Phase 1 (providers, cache, retry, pipeline, models) | 42 | Full provider + infrastructure coverage |
+
 ---
 
 ## 📁 Project Structure
 
 ```
-vaaniflow/
-├── vaaniflow/                     # Core Python library
-│   ├── pipeline.py                # Main orchestration
-│   ├── config.py                  # Pydantic settings
-│   ├── models.py                  # All data models
-│   ├── exceptions.py              # Custom exceptions
-│   ├── providers/                 # Provider abstraction layer
-│   │   ├── transcription/         # Whisper, AssemblyAI
-│   │   ├── translation/           # Google, Sarvam
-│   │   └── tts/                   # ElevenLabs, Sarvam, gTTS
-│   ├── audio/                     # Extractor, stitcher, normalizer
-│   ├── cache/                     # Redis translation cache
-│   └── utils/                     # Retry, logging, timing
-├── api/                           # FastAPI service
-│   ├── main.py                    # App + lifespan
-│   ├── routes/                    # Jobs, health endpoints
-│   └── middleware/                # Logging middleware
-├── tests/                         # Unit + integration tests
-├── docker/                        # Dockerfile + compose
+VaaniFlow/
+├── vaaniflow/                         # Core Python library
+│   ├── pipeline.py                    # Main orchestrator (11 stages)
+│   ├── config.py                      # Pydantic settings + feature toggles
+│   ├── models.py                      # All data models
+│   ├── exceptions.py                  # Custom exception hierarchy
+│   ├── metrics.py                     # Prometheus metric definitions
+│   ├── providers/                     # Provider abstraction layer
+│   │   ├── transcription/             # Whisper, AssemblyAI
+│   │   ├── translation/               # Google (batch), Sarvam
+│   │   └── tts/                       # ElevenLabs, Sarvam, gTTS
+│   ├── audio/                         # Extractor, stitcher, normalizer
+│   │   └── ambient_separator.py       # 🆕 Spectral subtraction
+│   ├── cache/                         # Redis translation cache
+│   ├── emotion/                       # 🆕 EmotionPreserver (librosa)
+│   ├── quality/                       # 🆕 BackTranslationQualityScorer
+│   ├── segmentation/                  # 🆕 SmartSegmentBoundaryOptimizer
+│   ├── pronunciation/                 # 🆕 IndianNamePronunciationCorrector
+│   ├── qc/                            # 🆕 Quality Control pipeline
+│   ├── repository/                    # 🆕 Redis job persistence
+│   └── utils/                         # Retry, logging, timing
+├── api/                               # FastAPI service
+│   ├── main.py                        # App + lifespan
+│   ├── routes/                        # Jobs, health, metrics endpoints
+│   └── middleware/                     # Logging middleware
+├── tests/                             # 98 unit + integration tests
+├── docker/                            # Dockerfile + compose
 ├── pyproject.toml
 └── README.md
 ```
 
 ---
 
+## ⚙️ Configuration
+
+All Phase 2 features are **config-togglable** via environment variables:
+
+```env
+# Feature toggles (all default to true)
+EMOTION_DETECTION_ENABLED=true
+BACK_TRANSLATION_ENABLED=true
+BACK_TRANSLATION_THRESHOLD=0.30
+BOUNDARY_OPTIMIZATION_ENABLED=true
+PRONUNCIATION_CORRECTION_ENABLED=true
+AMBIENT_SEPARATION_ENABLED=true
+QC_ENABLED=true
+QC_MAX_SILENCE_RATIO=0.7
+QC_MAX_LENGTH_RATIO=3.0
+
+# Provider API keys
+GOOGLE_API_KEY=your-google-key
+SARVAM_API_KEY=your-sarvam-key
+ELEVENLABS_API_KEY=your-elevenlabs-key
+
+# Infrastructure
+REDIS_URL=redis://localhost:6379/0
+```
+
+---
+
 ## 📊 Performance Notes
 
-- **Concurrent TTS synthesis**: All segments synthesized in parallel via `asyncio.gather`
-- **Translation caching**: Redis-backed with 24h TTL — cache hit rates of 40–60% on repeated content
-- **Lazy model loading**: Whisper model loaded on first use, not at import time
-- **Non-blocking I/O**: Synchronous libraries (gTTS, faster-whisper) wrapped with `run_in_executor`
-- **Background processing**: Jobs return 202 immediately; pipeline runs in FastAPI BackgroundTasks
+- **Batch translation**: 1 API call instead of N — massive cost + latency reduction
+- **Concurrent TTS**: All segments synthesized in parallel via `asyncio.gather`
+- **Translation caching**: Redis-backed with 24h TTL — 40–60% cache hit rate
+- **QC validation**: Catches bad TTS before stitching — prevents wasted compute
+- **Lazy model loading**: Whisper, spaCy, and librosa loaded on first use
+- **Non-blocking I/O**: Sync libraries wrapped with `run_in_executor`
+- **Background processing**: Jobs return 202 immediately; pipeline runs async
+
+---
+
+## 🛣️ Pipeline Flow (Phase 2)
+
+```
+  ┌─────────────┐
+  │  Input File  │
+  └──────┬───────┘
+         ▼
+  ┌──────────────┐     ┌──────────────────────┐
+  │   Extract    │────▶│  Ambient Separation   │  (spectral subtraction)
+  └──────────────┘     └──────────┬────────────┘
+                                  ▼
+                       ┌──────────────────────┐
+                       │     Transcribe       │  (Whisper / AssemblyAI)
+                       └──────────┬────────────┘
+                                  ▼
+                       ┌──────────────────────┐
+                       │ Boundary Optimization │  (spaCy sentence merge)
+                       └──────────┬────────────┘
+                                  ▼
+                       ┌──────────────────────┐
+                       │  Batch Translate     │  (1 API call + cache)
+                       └──────────┬────────────┘
+                                  ▼
+                       ┌──────────────────────┐
+                       │ Back-Translation QC  │  (BLEU ≥ 0.30?)
+                       └──────────┬────────────┘
+                                  ▼
+                       ┌──────────────────────┐
+                       │  Pronunciation Fix   │  (Indian name correction)
+                       └──────────┬────────────┘
+                                  ▼
+                       ┌──────────────────────┐
+                       │   TTS Synthesize     │  (emotion-aware params)
+                       └──────────┬────────────┘
+                                  ▼
+                       ┌──────────────────────┐
+                       │    QC Validation     │  (silence, length, size)
+                       └──────────┬────────────┘
+                                  ▼
+                       ┌──────────────────────┐
+                       │   Stitch + Remix     │  (ambient re-layering)
+                       └──────────┬────────────┘
+                                  ▼
+                       ┌──────────────────────┐
+                       │   🔊 Dubbed Audio    │
+                       └──────────────────────┘
+```
 
 ---
 
