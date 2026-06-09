@@ -239,7 +239,7 @@ Sarvam's JD specifically asks to *"distinguish rate limits from auth errors from
 - `ProviderTimeoutError` → retry once, then fallback
 
 ### Why Batch Translation?
-Phase 1 called `translate()` N times (one per segment). Phase 2 calls `translate_batch()` **once** with all cache-miss texts. Google's API supports multi-`q` params, so N segments = 1 API call. Sarvam falls back to sequential calls since their API is single-text.
+Phase 1 called `translate()` N times (one per segment). Phase 2 calls `translate_batch()` **once** with all cache-miss texts. Google's API supports multi-`q` params, so N segments = 1 API call. Sarvam executes single-text API calls concurrently via `asyncio.gather` to avoid network I/O pileups.
 
 ### Why Back-Translation Quality Scoring?
 Translation APIs can hallucinate, especially with short segments or code-mixed text. Back-translating and computing BLEU catches these silently. If BLEU < 0.30, the segment is auto-retried with an alternate provider — no human intervention needed.
@@ -354,12 +354,13 @@ REDIS_URL=redis://localhost:6379/0
 
 ## 📊 Performance Notes
 
-- **Batch translation**: 1 API call instead of N — massive cost + latency reduction
+- **Batch translation**: 1 API call instead of N, with single-text providers falling back to concurrent execution via `asyncio.gather`
 - **Concurrent TTS**: All segments synthesized in parallel via `asyncio.gather`
+- **FFmpeg Stitching**: Native FFmpeg filtergraphs assemble audio, completely bypassing Python memory limits on long-form content
 - **Translation caching**: Redis-backed with 24h TTL — 40–60% cache hit rate
 - **QC validation**: Catches bad TTS before stitching — prevents wasted compute
 - **Lazy model loading**: Whisper, spaCy, and librosa loaded on first use
-- **Non-blocking I/O**: Sync libraries wrapped with `run_in_executor`
+- **Non-blocking I/O**: Sync file writes offloaded to threadpool via `asyncio.to_thread`
 - **Background processing**: Jobs return 202 immediately; pipeline runs async
 
 ---

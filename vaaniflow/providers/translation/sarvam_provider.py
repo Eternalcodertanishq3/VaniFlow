@@ -135,13 +135,13 @@ class SarvamTranslationProvider(BaseTranslationProvider):
     ) -> list[str]:
         """
         Sarvam API is single-text only.
-        Default implementation: translate each text individually.
+        Translate each text concurrently using asyncio.gather.
         """
-        results = []
-        for text in texts:
-            result = await self.translate(text, source_language, target_language)
-            results.append(result)
-        return results
+        tasks = [
+            self.translate(text, source_language, target_language)
+            for text in texts
+        ]
+        return await asyncio.gather(*tasks)
 
     async def health_check(self) -> bool:
         try:

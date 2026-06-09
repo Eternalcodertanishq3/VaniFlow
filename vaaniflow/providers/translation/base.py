@@ -57,14 +57,15 @@ class BaseTranslationProvider(ABC):
         target_language: SupportedLanguage | str,
     ) -> list[str]:
         """
-        Translate multiple texts in one API call.
-        Default implementation calls translate() N times (override for efficiency).
+        Translate multiple texts concurrently.
+        Default implementation calls translate() N times concurrently (override for efficiency).
         """
-        results = []
-        for text in texts:
-            result = await self.translate(text, source_language, target_language)
-            results.append(result)
-        return results
+        import asyncio
+        tasks = [
+            self.translate(text, source_language, target_language)
+            for text in texts
+        ]
+        return await asyncio.gather(*tasks)
 
     async def translate_with_logging(
         self,

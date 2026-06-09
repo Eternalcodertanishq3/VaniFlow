@@ -48,10 +48,14 @@ async def create_dubbing_job(
 
     # Save uploaded file
     suffix = Path(file.filename).suffix if file.filename else ".wav"
-    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-        content = await file.read()
-        tmp.write(content)
-        tmp_path = Path(tmp.name)
+    content = await file.read()
+    
+    def write_temp_file(data: bytes, suf: str) -> Path:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suf) as tmp:
+            tmp.write(data)
+            return Path(tmp.name)
+            
+    tmp_path = await asyncio.to_thread(write_temp_file, content, suffix)
 
     log.info(
         "job_created",
