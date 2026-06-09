@@ -43,6 +43,17 @@ class Settings(BaseSettings):
     whisper_device: str = Field(default="cpu", alias="WHISPER_DEVICE")
     whisper_compute_type: str = Field(default="int8", alias="WHISPER_COMPUTE_TYPE")
 
+    # Phase 2: Feature toggles
+    emotion_detection_enabled: bool = Field(default=True, alias="EMOTION_DETECTION_ENABLED")
+    back_translation_enabled: bool = Field(default=True, alias="BACK_TRANSLATION_ENABLED")
+    back_translation_threshold: float = Field(default=0.30, alias="BACK_TRANSLATION_THRESHOLD")
+    boundary_optimization_enabled: bool = Field(default=True, alias="BOUNDARY_OPTIMIZATION_ENABLED")
+    pronunciation_correction_enabled: bool = Field(default=True, alias="PRONUNCIATION_CORRECTION_ENABLED")
+    ambient_separation_enabled: bool = Field(default=True, alias="AMBIENT_SEPARATION_ENABLED")
+    qc_enabled: bool = Field(default=True, alias="QC_ENABLED")
+    qc_max_silence_ratio: float = Field(default=0.7, alias="QC_MAX_SILENCE_RATIO")
+    qc_max_length_ratio: float = Field(default=3.0, alias="QC_MAX_LENGTH_RATIO")
+
     model_config = {
         "env_file": ".env",
         "env_file_encoding": "utf-8",

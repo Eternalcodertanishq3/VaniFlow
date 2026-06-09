@@ -50,6 +50,22 @@ class BaseTranslationProvider(ABC):
         """Return True if this provider supports the given language."""
         ...
 
+    async def translate_batch(
+        self,
+        texts: list[str],
+        source_language: SupportedLanguage | str,
+        target_language: SupportedLanguage | str,
+    ) -> list[str]:
+        """
+        Translate multiple texts in one API call.
+        Default implementation calls translate() N times (override for efficiency).
+        """
+        results = []
+        for text in texts:
+            result = await self.translate(text, source_language, target_language)
+            results.append(result)
+        return results
+
     async def translate_with_logging(
         self,
         text: str,

@@ -127,6 +127,22 @@ class SarvamTranslationProvider(BaseTranslationProvider):
                 f"Sarvam request timed out after {settings.provider_timeout_seconds}s",
             )
 
+    async def translate_batch(
+        self,
+        texts: list[str],
+        source_language: SupportedLanguage | str,
+        target_language: SupportedLanguage | str,
+    ) -> list[str]:
+        """
+        Sarvam API is single-text only.
+        Default implementation: translate each text individually.
+        """
+        results = []
+        for text in texts:
+            result = await self.translate(text, source_language, target_language)
+            results.append(result)
+        return results
+
     async def health_check(self) -> bool:
         try:
             result = await self.translate("hello", "en", "hi")

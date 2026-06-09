@@ -9,6 +9,7 @@ import structlog
 from vaaniflow.utils.logging import setup_logging
 from vaaniflow.config import settings
 from api.routes import jobs, health
+from api.routes import metrics
 from api.middleware.logging_middleware import LoggingMiddleware
 
 log = structlog.get_logger(__name__)
@@ -40,3 +41,4 @@ app.add_middleware(LoggingMiddleware)
 
 app.include_router(health.router, prefix="/health", tags=["health"])
 app.include_router(jobs.router, prefix="/jobs", tags=["jobs"])
+app.include_router(metrics.router, tags=["observability"])

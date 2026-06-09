@@ -132,3 +132,96 @@ def sample_transcription_result():
         total_duration_ms=8000,
         provider_used=TranscriptionProvider.WHISPER,
     )
+
+
+# ============ Phase 2 Fixtures ============
+
+@pytest.fixture
+def mock_emotion_preserver():
+    """Mock emotion preserver to return neutral."""
+    with patch("vaaniflow.emotion.detector.EmotionPreserver.detect") as mock:
+        from vaaniflow.emotion.detector import EmotionResult, EmotionLabel
+        mock.return_value = EmotionResult(
+            label=EmotionLabel.NEUTRAL, confidence=1.0,
+            pitch_mean_hz=0.0, energy_rms=0.0, tempo_bpm=0.0,
+            speaking_rate=1.0, pitch_shift=0.0, tts_stability=0.75,
+        )
+        yield mock
+
+
+@pytest.fixture
+def mock_pronunciation_corrector():
+    """Mock pronunciation corrector to return unchanged text."""
+    with patch(
+        "vaaniflow.pronunciation.corrector.IndianNamePronunciationCorrector.correct"
+    ) as mock:
+        mock.side_effect = lambda text: (text, [])
+        yield mock
+
+
+@pytest.fixture
+def mock_boundary_optimizer():
+    """Mock boundary optimizer to return unchanged transcription."""
+    with patch(
+        "vaaniflow.segmentation.boundary_optimizer.SmartSegmentBoundaryOptimizer.optimize"
+    ) as mock:
+        mock.side_effect = lambda t: t
+        yield mock
+
+
+@pytest.fixture
+def mock_ambient_preserver():
+    """Mock ambient preserver to skip separation."""
+    with patch(
+        "vaaniflow.audio.ambient_separator.AmbientAudioPreserver.separate"
+    ) as mock_sep, patch(
+        "vaaniflow.audio.ambient_separator.AmbientAudioPreserver.remix"
+    ) as mock_remix:
+        from vaaniflow.audio.ambient_separator import SeparationResult
+        mock_sep.return_value = SeparationResult(
+            vocals_bytes=b"", ambient_bytes=b"",
+            ambient_level_db=-96.0, has_significant_ambient=False,
+        )
+        mock_remix.side_effect = lambda dubbed, ambient: dubbed
+        yield mock_sep, mock_remix
+
+
+@pytest.fixture
+def mock_qc_controller():
+    """Mock QC controller to pass everything."""
+    with patch(
+        "vaaniflow.qc.pipeline.QualityController.validate_pipeline_output"
+    ) as mock:
+        from vaaniflow.qc.models import PipelineQCResult, QCStatus
+        mock.return_value = PipelineQCResult(
+            overall_status=QCStatus.PASS,
+            segments=[], pass_count=2, warn_count=0,
+            fail_count=0, retry_segments=[],
+        )
+        yield mock
+
+
+@pytest.fixture
+def mock_back_translation_scorer():
+    """Mock back-translation scorer to always pass."""
+    with patch(
+        "vaaniflow.quality.back_translation.BackTranslationQualityScorer.score"
+    ) as mock:
+        from vaaniflow.quality.back_translation import BackTranslationScore
+        mock.return_value = BackTranslationScore(
+            original_text="", translated_text="",
+            back_translated_text="", bleu_score=0.8,
+            passed=True, should_retry=False,
+        )
+        yield mock
+
+
+@pytest.fixture
+def mock_job_repo():
+    """Mock DubbingJobRepository for API tests."""
+    with patch("api.routes.jobs.job_repo") as mock:
+        mock.save = AsyncMock(return_value=True)
+        mock.get = AsyncMock(return_value=None)
+        mock.list_all = AsyncMock(return_value=[])
+        mock.delete = AsyncMock(return_value=True)
+        yield mock

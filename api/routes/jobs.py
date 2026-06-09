@@ -14,11 +14,12 @@ from vaaniflow.models import (
 )
 from vaaniflow.pipeline import VaaniFlowPipeline
 from vaaniflow.config import settings
+from vaaniflow.repository.job_repository import DubbingJobRepository
 
 router = APIRouter()
 log = structlog.get_logger(__name__)
 pipeline = VaaniFlowPipeline()
-jobs_store: dict[str, DubbingJob] = {}  # In production: Redis
+job_repo = DubbingJobRepository()
 
 
 @router.post("/", response_model=DubbingJobResponse, status_code=202)
@@ -43,7 +44,7 @@ async def create_dubbing_job(
         voice_id=voice_id,
     )
     job = DubbingJob(config=config)
-    jobs_store[job.job_id] = job
+    await job_repo.save(job)
 
     # Save uploaded file
     suffix = Path(file.filename).suffix if file.filename else ".wav"
@@ -72,7 +73,7 @@ async def create_dubbing_job(
 @router.get("/{job_id}", response_model=DubbingJobResponse)
 async def get_job_status(job_id: str):
     """Get current status and progress of a dubbing job."""
-    job = jobs_store.get(job_id)
+    job = await job_repo.get(job_id)
     if not job:
         raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
 
@@ -88,7 +89,7 @@ async def get_job_status(job_id: str):
 @router.get("/{job_id}/download")
 async def download_result(job_id: str):
     """Download completed dubbed audio file."""
-    job = jobs_store.get(job_id)
+    job = await job_repo.get(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
     if job.status != JobStatus.COMPLETED:
@@ -114,7 +115,7 @@ async def list_jobs():
             output_url=f"/jobs/{job.job_id}/download" if job.status == JobStatus.COMPLETED else None,
             error=job.error_message,
         )
-        for job in jobs_store.values()
+        for job in await job_repo.list_all()
     ]
 
 

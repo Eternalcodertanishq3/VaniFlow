@@ -56,6 +56,7 @@ async def test_full_pipeline_with_mocked_providers():
     with patch("vaaniflow.audio.extractor.AudioExtractor.extract") as mock_extract, \
          patch("vaaniflow.providers.transcription.whisper_provider.WhisperProvider.transcribe") as mock_transcribe, \
          patch("vaaniflow.providers.translation.google_provider.GoogleTranslationProvider.translate") as mock_translate, \
+         patch("vaaniflow.providers.translation.google_provider.GoogleTranslationProvider.translate_batch") as mock_translate_batch, \
          patch("vaaniflow.providers.tts.gtts_provider.GTTSProvider.synthesize") as mock_synthesize, \
          patch("vaaniflow.providers.tts.gtts_provider.GTTSProvider.synthesize_with_logging") as mock_synth_log, \
          patch("vaaniflow.audio.stitcher.AudioStitcher.stitch") as mock_stitch, \
@@ -66,6 +67,8 @@ async def test_full_pipeline_with_mocked_providers():
         mock_extract.return_value = Path("/tmp/extracted.wav")
         mock_transcribe.return_value = mock_transcription
         mock_translate.return_value = "नमस्ते दुनिया"
+        # Phase 2: Pipeline now uses translate_batch for cache misses
+        mock_translate_batch.return_value = ["नमस्ते दुनिया", "यह एक परीक्षा है"]
         mock_synth_log.return_value = TTSSynthesisResponse(
             audio_bytes=b"fake_audio_" * 50,
             duration_ms=2000.0,
@@ -86,7 +89,8 @@ async def test_full_pipeline_with_mocked_providers():
         # Verify all stages were called
         mock_extract.assert_called_once()
         mock_transcribe.assert_called_once()
-        assert mock_translate.call_count == 2  # Two segments
+        # Phase 2: translate_batch is called once with all cache-miss texts
+        mock_translate_batch.assert_called_once()
         assert mock_synth_log.call_count == 2  # Two segments synthesized concurrently
         mock_stitch.assert_called_once()
 
@@ -117,6 +121,7 @@ async def test_pipeline_uses_cache_hits():
     with patch("vaaniflow.audio.extractor.AudioExtractor.extract") as mock_extract, \
          patch("vaaniflow.providers.transcription.whisper_provider.WhisperProvider.transcribe") as mock_transcribe, \
          patch("vaaniflow.providers.translation.google_provider.GoogleTranslationProvider.translate") as mock_translate, \
+         patch("vaaniflow.providers.translation.google_provider.GoogleTranslationProvider.translate_batch") as mock_translate_batch, \
          patch("vaaniflow.providers.tts.gtts_provider.GTTSProvider.synthesize_with_logging") as mock_synth, \
          patch("vaaniflow.audio.stitcher.AudioStitcher.stitch") as mock_stitch, \
          patch("vaaniflow.cache.redis_cache.TranslationCache.get") as mock_cache_get, \
@@ -124,7 +129,7 @@ async def test_pipeline_uses_cache_hits():
 
         mock_extract.return_value = Path("/tmp/extracted.wav")
         mock_transcribe.return_value = mock_transcription
-        # Cache HIT — translate should NOT be called
+        # Cache HIT — translate_batch should NOT be called
         mock_cache_get.return_value = "வணக்கம்"
         mock_synth.return_value = TTSSynthesisResponse(
             audio_bytes=b"audio" * 50, duration_ms=1500, provider="gtts",
@@ -136,5 +141,6 @@ async def test_pipeline_uses_cache_hits():
 
         # Translation provider should NOT have been called (cache hit)
         mock_translate.assert_not_called()
+        mock_translate_batch.assert_not_called()
         # Cache set should NOT be called (already cached)
         mock_cache_set.assert_not_called()

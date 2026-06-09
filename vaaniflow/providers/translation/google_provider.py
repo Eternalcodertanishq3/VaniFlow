@@ -102,6 +102,56 @@ class GoogleTranslationProvider(BaseTranslationProvider):
                 f"Request timed out after {settings.provider_timeout_seconds}s",
             )
 
+    @retry_on_rate_limit(max_attempts=3)
+    @retry_on_server_error(max_attempts=2)
+    async def translate_batch(
+        self,
+        texts: list[str],
+        source_language: SupportedLanguage | str,
+        target_language: SupportedLanguage | str,
+    ) -> list[str]:
+        """
+        Google Translate batch API — one call for all segments.
+        MUCH cheaper and faster than N individual calls.
+        """
+        source = source_language.value if isinstance(source_language, SupportedLanguage) else source_language
+        target = target_language.value if isinstance(target_language, SupportedLanguage) else target_language
+
+        # Build params with multiple 'q' values
+        params = {
+            "key": self.api_key,
+            "target": target,
+            "source": source,
+            "format": "text",
+        }
+
+        session = await self._get_session()
+        try:
+            # aiohttp handles list params correctly
+            params["q"] = texts
+            async with session.post(GOOGLE_TRANSLATE_URL, params=params) as resp:
+                if resp.status == 429:
+                    raise RateLimitError(self.provider_name, "Rate limited")
+                if resp.status in (401, 403):
+                    raise AuthenticationError(
+                        self.provider_name, f"Invalid API key. Status: {resp.status}"
+                    )
+                if resp.status >= 500:
+                    raise ProviderServerError(
+                        self.provider_name, f"Server error: {resp.status}"
+                    )
+
+                resp.raise_for_status()
+                data = await resp.json()
+                translations = data.get("data", {}).get("translations", [])
+                return [t["translatedText"] for t in translations]
+
+        except asyncio.TimeoutError:
+            raise ProviderTimeoutError(
+                self.provider_name,
+                f"Batch request timed out after {settings.provider_timeout_seconds}s",
+            )
+
     async def health_check(self) -> bool:
         try:
             result = await self.translate("hello", "en", "hi")
