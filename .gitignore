@@ -1,0 +1,40 @@
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment
+.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Outputs
+outputs/
+*.wav
+*.mp3
+
+# pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Redis
+dump.rdb
