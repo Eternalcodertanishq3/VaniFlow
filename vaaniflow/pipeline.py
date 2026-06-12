@@ -338,11 +338,21 @@ class VaaniFlowPipeline:
         synthesized_segments = []
         total_bytes = 0
 
-        # Phase 2: Pre-detect emotions for all segments from original audio
+        # Phase 2: Pre-detect emotions for all segments from original audio in parallel
         emotions = {}
-        for seg in translation.segments:
-            seg_audio = await self._extract_segment_audio(raw_audio_path, seg)
-            emotions[seg.index] = await self.emotion_preserver.detect(seg_audio)
+        if translation.segments:
+            segment_audios = await asyncio.gather(*[
+                self._extract_segment_audio(raw_audio_path, seg)
+                for seg in translation.segments
+            ])
+            emotion_results = await asyncio.gather(*[
+                self.emotion_preserver.detect(audio)
+                for audio in segment_audios
+            ])
+            emotions = {
+                seg.index: emo
+                for seg, emo in zip(translation.segments, emotion_results)
+            }
 
         # Synthesize all segments concurrently for speed
         tasks = [
