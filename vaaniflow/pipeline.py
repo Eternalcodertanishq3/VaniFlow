@@ -161,7 +161,7 @@ class VaaniFlowPipeline:
             # Stage 5: Text-to-Speech (with emotion + pronunciation)
             await self._update_status(job, JobStatus.SYNTHESIZING, 55.0)
             with PIPELINE_STAGE_DURATION.labels("synthesize").time():
-                tts_result = await self._synthesize(translation, job.config)
+                tts_result = await self._synthesize(translation, job.config, raw_audio_path)
             log.info(
                 "synthesis_completed",
                 segments=len(tts_result.segments),
@@ -330,7 +330,7 @@ class VaaniFlowPipeline:
         )
 
     async def _synthesize(
-        self, translation: TranslationResult, config: DubbingJobConfig
+        self, translation: TranslationResult, config: DubbingJobConfig, raw_audio_path: Path
     ) -> TTSResult:
         primary_provider = self.tts_providers[config.tts_provider]
         fallback_provider = self.tts_providers[TTSProvider.GTTS]
@@ -338,10 +338,16 @@ class VaaniFlowPipeline:
         synthesized_segments = []
         total_bytes = 0
 
+        # Phase 2: Pre-detect emotions for all segments from original audio
+        emotions = {}
+        for seg in translation.segments:
+            seg_audio = await self._extract_segment_audio(raw_audio_path, seg)
+            emotions[seg.index] = await self.emotion_preserver.detect(seg_audio)
+
         # Synthesize all segments concurrently for speed
         tasks = [
             self._synthesize_segment(
-                segment, config, primary_provider, fallback_provider
+                segment, config, primary_provider, fallback_provider, emotions.get(segment.index)
             )
             for segment in translation.segments
         ]
@@ -358,7 +364,7 @@ class VaaniFlowPipeline:
             total_audio_bytes=total_bytes,
         )
 
-    async def _synthesize_segment(self, segment, config, primary, fallback) -> bytes:
+    async def _synthesize_segment(self, segment, config, primary, fallback, emotion) -> bytes:
         from vaaniflow.providers.tts.base import TTSSynthesisRequest
 
         # Phase 2: Pronunciation correction BEFORE TTS
@@ -373,10 +379,10 @@ class VaaniFlowPipeline:
                 )
                 text_for_tts = corrected_text
 
-        # Phase 2: Emotion detection from original audio
-        emotion = await self.emotion_preserver.detect(
-            segment.audio_bytes or b""  # original audio bytes from extraction
-        )
+        # Phase 2: Emotion detection from original audio is pre-calculated
+        if emotion is None:
+            emotion = await self.emotion_preserver.detect(b"")
+            
         EMOTION_DETECTIONS.labels(emotion=emotion.label.value).inc()
 
         request = TTSSynthesisRequest(
@@ -418,3 +424,34 @@ class VaaniFlowPipeline:
         job.progress_pct = progress
         from datetime import datetime
         job.updated_at = datetime.utcnow()
+
+    async def _extract_segment_audio(self, audio_path: Path, segment: AudioSegment) -> bytes:
+        """Extract a segment's audio from the main 16kHz mono WAV file."""
+        def slice_wav():
+            import wave
+            import io
+            try:
+                with wave.open(str(audio_path), 'rb') as wav:
+                    framerate = wav.getframerate()
+                    sampwidth = wav.getsampwidth()
+                    nchannels = wav.getnchannels()
+                    
+                    start_frame = int((segment.start_ms / 1000.0) * framerate)
+                    frames_to_read = int((segment.duration_ms / 1000.0) * framerate)
+                    
+                    wav.setpos(start_frame)
+                    frames = wav.readframes(frames_to_read)
+                    
+                    out_io = io.BytesIO()
+                    with wave.open(out_io, 'wb') as out_wav:
+                        out_wav.setnchannels(nchannels)
+                        out_wav.setsampwidth(sampwidth)
+                        out_wav.setframerate(framerate)
+                        out_wav.writeframes(frames)
+                    return out_io.getvalue()
+            except Exception as e:
+                log.warning("audio_slice_failed", error=str(e), segment=segment.index)
+                return b""
+                
+        import asyncio
+        return await asyncio.to_thread(slice_wav)
