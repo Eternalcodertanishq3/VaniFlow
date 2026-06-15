@@ -2,7 +2,8 @@
 FastAPI application with proper lifespan management.
 """
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, HTTPException
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import structlog
 
@@ -42,3 +43,16 @@ app.add_middleware(LoggingMiddleware)
 app.include_router(health.router, prefix="/health", tags=["health"])
 app.include_router(jobs.router, prefix="/jobs", tags=["jobs"])
 app.include_router(metrics.router, tags=["observability"])
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    if isinstance(exc, HTTPException):
+        # We don't want to turn 404s/400s into 500s. We raise it to let FastAPI handle it properly
+        # if it's already an HTTPException.
+        raise
+
+    log.error("unhandled_exception", error=str(exc), path=request.url.path)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"}
+    )
