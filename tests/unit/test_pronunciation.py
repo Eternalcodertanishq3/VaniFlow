@@ -102,3 +102,15 @@ def test_word_boundary_only(corrector):
     text = "The Puneet was great"  # Should NOT match "Pune"
     corrected, corrections = corrector.correct(text)
     assert "Puneet" in corrected  # "Pune" correction should NOT apply here
+
+
+def test_tricky_indian_edge_cases(corrector):
+    """Test tricky Indian phonetics: mixed-language, Aadhar, crore, local cities."""
+    text = "I paid 5 crores in rupees for my Aadhar update in Kanpur and Lucknow."
+    corrected, corrections = corrector.correct(text)
+    assert "5 krores" in corrected
+    assert "roo-peez" in corrected
+    assert "Aa-dhaar" in corrected
+    assert "Kaan-poor" in corrected
+    assert "Lak-now" in corrected
+    assert len(corrections) == 5

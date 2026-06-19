@@ -169,6 +169,46 @@ curl http://localhost:8000/health/ready
 curl http://localhost:8000/metrics
 ```
 
+## 🚀 Sarvam Integration Showcase
+
+VaaniFlow is designed to be a native showcase for **Sarvam AI**'s APIs, treating them as first-class citizens. By default, both the translation and TTS layers fall back directly to Sarvam.
+
+### Clean Abstraction Layer
+
+The pipeline interacts with Sarvam through our strictly typed provider interface, abstracting away network complexity, retry logic, and batching constraints:
+
+```python
+# vaaniflow/providers/translation/sarvam_provider.py
+async def translate_batch(self, texts: list[str], source_lang: str, target_lang: str) -> list[str]:
+    """Concurrent execution of Sarvam's single-text translation API."""
+    async def _translate_single(text: str) -> str:
+        # Provider abstractions automatically handle RateLimits and ServerErrors
+        # via exponential backoff (tenacity) under the hood.
+        payload = {
+            "input": text,
+            "source_language_code": f"{source_lang}-IN",
+            "target_language_code": f"{target_lang}-IN",
+            "speaker_gender": "Male",
+            "mode": "formal"
+        }
+        return await self._make_request(payload)
+
+    # Parallelize N network calls across the event loop for minimum latency
+    return await asyncio.gather(*[_translate_single(t) for t in texts])
+```
+
+### Full E2E Execution purely on Sarvam
+
+You don't need any other API keys. A simple `curl` command executes the entire pipeline using only Sarvam models:
+
+```bash
+curl -X POST http://localhost:8000/jobs/ \
+  -F "file=@input_video.mp4" \
+  -F "target_language=hi"
+# Because tts_provider and translation_provider default to "sarvam", 
+# the entire pipeline is powered natively by Sarvam AI.
+```
+
 ---
 
 ## 📈 Production Observability

@@ -50,6 +50,23 @@ INDIAN_PRONUNCIATION_MAP = {
     "guru":         "goo-roo",
     "mantra":       "man-tra",
 
+    # Everyday Indian Terms
+    "Aadhar":       "Aa-dhaar",
+    "Aadhaar":      "Aa-dhaar",
+    "crore":        "krore",
+    "lakh":         "laakh",
+    "rupees":       "roo-peez",
+    "lakhs":        "laakhs",
+    "crores":       "krores",
+
+    # Additional Cities
+    "Kanpur":       "Kaan-poor",
+    "Lucknow":      "Lak-now",
+    "Gurugram":     "Goo-roo-graam",
+    "Noida":        "Noy-da",
+    "Indore":       "In-dore",
+    "Bhopal":       "Bho-paal",
+
     # States
     "Maharashtra":  "Ma-ha-raash-tra",
     "Tamil Nadu":   "Ta-mil Naa-doo",
