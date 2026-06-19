@@ -2,7 +2,8 @@
 
 ## 1. Multi-Modal Dubbing & Lip Sync
 - **Integration:** Wav2Lip or SyncTalk.
-- **Description:** Currently, the audio is just replaced. Real production dubbing requires the speaker's lip movements to match the new language.
+- **Status:** ✅ **Architectural placeholder implemented** — `vaaniflow/lipsync/` exports a JSON alignment manifest with per-segment timestamps, emotion labels, and speaking rates. A downstream Wav2Lip/SyncTalk renderer can consume this manifest to generate visually aligned dubbed video. Toggle: `LIPSYNC_EXPORT_ENABLED=true`.
+- **Next step:** Wire a Wav2Lip inference call to the exporter's output to generate the final lip-synced video.
 
 ## 2. Advanced Multi-Speaker Recognition & Diarization
 - **Integration:** Pyannote.audio.

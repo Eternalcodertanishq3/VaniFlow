@@ -5,7 +5,7 @@
 > Transcribe → Translate → Synthesize → Stitch — fully async, with emotion preservation, quality control, and production observability.
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![Tests](https://img.shields.io/badge/tests-98%20passed-brightgreen.svg)](#-running-tests)
+[![Tests](https://img.shields.io/badge/tests-132%20passed-brightgreen.svg)](#-running-tests)
 [![Version](https://img.shields.io/badge/version-2.0.0-orange.svg)](pyproject.toml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -69,10 +69,14 @@ Most dubbing pipelines just translate words. **VaaniFlow preserves the soul of t
 | 😊 **EmotionPreserver** | Detects pitch, energy, tempo from original audio → injects speaking rate + pitch into TTS | Dubbed audio *feels* the same — angry stays angry, sad stays sad |
 | 🔄 **BackTranslationQualityScorer** | Back-translates to source → BLEU score → auto-retries with alt provider if quality fails | Catches hallucinated/broken translations before they reach TTS |
 | ✂️ **SmartSegmentBoundaryOptimizer** | Merges fragmented Whisper segments using spaCy sentence tokenization | "The quick brown fox" + "jumped over" → one segment = better translation |
-| 🗣️ **IndianNamePronunciationCorrector** | 40+ Indian names/places/brands → phonetic hints before TTS | "Bangalore" → "Baanga-lore" so TTS pronounces it correctly |
+| 🗣️ **IndianNamePronunciationCorrector** | 60+ Indian names/places/brands → phonetic hints before TTS | "Bangalore" → "Baanga-lore" so TTS pronounces it correctly |
 | 🎵 **AmbientAudioPreserver** | Spectral subtraction separates background audio → re-layers after dubbing | Background music/ambient sounds survive the dubbing process |
+| 🔀 **CodeSwitchNormalizer** | Detects English words in Indic text (Hinglish/Tanglish) → marks with `[EN:]` tags for TTS | "Bill print karo" reads naturally without breaking accent or pacing |
+| 💰 **CostTracker** | Tracks API calls avoided via Redis cache → reports estimated USD savings at `/stats` | Enterprise clients see exactly how much money caching saves at scale |
+| 🎬 **LipSyncExporter** | Exports per-segment timing manifest for downstream Wav2Lip/SyncTalk renderers | Complete multi-modal architectural blueprint for visual dubbing |
 
 ---
+
 
 ## ⚡ Quick Start
 
@@ -167,6 +171,30 @@ curl http://localhost:8000/health/ready
 
 # Prometheus metrics
 curl http://localhost:8000/metrics
+
+# Cost optimization dashboard
+curl http://localhost:8000/stats
+```
+
+**Cost Dashboard Response (`/stats`):**
+```json
+{
+  "cost_optimization": {
+    "translation_api_calls_made": 47,
+    "translation_api_calls_avoided_via_cache": 123,
+    "cache_hit_rate_pct": 72.4,
+    "estimated_translation_savings_usd": 0.369,
+    "estimated_translation_spent_usd": 0.141
+  },
+  "tts_costs": {
+    "sarvam": { "calls": 47, "estimated_cost_usd": 0.188 }
+  },
+  "operations": {
+    "total_jobs_completed": 12,
+    "total_segments_processed": 170,
+    "uptime_seconds": 3600
+  }
+}
 ```
 
 ## 🚀 Sarvam Integration Showcase
@@ -322,9 +350,12 @@ pytest --cov=vaaniflow --cov=api -v
 | Emotion Detection | 9 | Neutral fallback, classification rules, TTS param mapping |
 | Back-Translation | 10 | BLEU scoring, threshold, short-text skip, provider errors |
 | Boundary Optimizer | 5 | Merging, gap constraint, word limit, spaCy unavailable |
-| Pronunciation | 11 | Lexicon substitution, case-insensitive, runtime add/remove |
+| Pronunciation | 12 | Lexicon substitution, case-insensitive, Hinglish edge cases |
 | Ambient Audio | 6 | Separation, remix, scipy unavailable, error handling |
 | Job Repository | 8 | CRUD operations, Redis fallback |
+| Code-Switch Normalizer | 17 | Hinglish/Tanglish detection, marking, phrase mapping |
+| Cost Tracker | 10 | Cache hit rates, USD savings, provider breakdown |
+| Lip-Sync Exporter | 6 | Manifest creation, JSON structure, emotion metadata |
 | Phase 1 (providers, cache, retry, pipeline, models) | 42 | Full provider + infrastructure coverage |
 
 ---
@@ -334,7 +365,7 @@ pytest --cov=vaaniflow --cov=api -v
 ```
 VaaniFlow/
 ├── vaaniflow/                         # Core Python library
-│   ├── pipeline.py                    # Main orchestrator (11 stages)
+│   ├── pipeline.py                    # Main orchestrator (12 stages)
 │   ├── config.py                      # Pydantic settings + feature toggles
 │   ├── models.py                      # All data models
 │   ├── exceptions.py                  # Custom exception hierarchy
@@ -344,20 +375,23 @@ VaaniFlow/
 │   │   ├── translation/               # Google (batch), Sarvam
 │   │   └── tts/                       # ElevenLabs, Sarvam, gTTS
 │   ├── audio/                         # Extractor, stitcher, normalizer
-│   │   └── ambient_separator.py       # 🆕 Spectral subtraction
+│   │   └── ambient_separator.py       # Spectral subtraction
 │   ├── cache/                         # Redis translation cache
-│   ├── emotion/                       # 🆕 EmotionPreserver (librosa)
-│   ├── quality/                       # 🆕 BackTranslationQualityScorer
-│   ├── segmentation/                  # 🆕 SmartSegmentBoundaryOptimizer
-│   ├── pronunciation/                 # 🆕 IndianNamePronunciationCorrector
-│   ├── qc/                            # 🆕 Quality Control pipeline
-│   ├── repository/                    # 🆕 Redis job persistence
+│   ├── cost/                          # 🆕 Token & Cost optimization tracker
+│   ├── emotion/                       # EmotionPreserver (librosa)
+│   ├── lipsync/                       # 🆕 Video lip-sync manifest exporter
+│   ├── normalization/                 # 🆕 Code-switching normalizer (Hinglish)
+│   ├── quality/                       # BackTranslationQualityScorer
+│   ├── segmentation/                  # SmartSegmentBoundaryOptimizer
+│   ├── pronunciation/                 # IndianNamePronunciationCorrector
+│   ├── qc/                            # Quality Control pipeline
+│   ├── repository/                    # Redis job persistence
 │   └── utils/                         # Retry, logging, timing
 ├── api/                               # FastAPI service
 │   ├── main.py                        # App + lifespan
-│   ├── routes/                        # Jobs, health, metrics endpoints
+│   ├── routes/                        # Jobs, health, metrics, stats endpoints
 │   └── middleware/                     # Logging middleware
-├── tests/                             # 98 unit + integration tests
+├── tests/                             # 132 unit + integration tests
 ├── docker/                            # Dockerfile + compose
 ├── pyproject.toml
 └── README.md
@@ -367,10 +401,10 @@ VaaniFlow/
 
 ## ⚙️ Configuration
 
-All Phase 2 features are **config-togglable** via environment variables:
+All features are **config-togglable** via environment variables:
 
 ```env
-# Feature toggles (all default to true)
+# Phase 2: Feature toggles (all default to true)
 EMOTION_DETECTION_ENABLED=true
 BACK_TRANSLATION_ENABLED=true
 BACK_TRANSLATION_THRESHOLD=0.30
@@ -381,10 +415,14 @@ QC_ENABLED=true
 QC_MAX_SILENCE_RATIO=0.7
 QC_MAX_LENGTH_RATIO=3.0
 
+# Phase 3: Showcase features
+CODE_SWITCH_NORMALIZATION_ENABLED=true   # Hinglish/Tanglish support
+LIPSYNC_EXPORT_ENABLED=false             # Lip-sync manifest export
+
 # Provider API keys
-GOOGLE_API_KEY=your-google-key
-SARVAM_API_KEY=your-sarvam-key
-ELEVENLABS_API_KEY=your-elevenlabs-key
+SARVAM_API_KEY=your-sarvam-key           # Only key needed for full E2E
+GOOGLE_API_KEY=your-google-key           # Optional
+ELEVENLABS_API_KEY=your-elevenlabs-key   # Optional
 
 # Infrastructure
 REDIS_URL=redis://localhost:6379/0

@@ -11,6 +11,7 @@ from vaaniflow.utils.logging import setup_logging
 from vaaniflow.config import settings
 from api.routes import jobs, health
 from api.routes import metrics
+from api.routes import stats
 from api.middleware.logging_middleware import LoggingMiddleware
 
 log = structlog.get_logger(__name__)
@@ -20,7 +21,7 @@ log = structlog.get_logger(__name__)
 async def lifespan(app: FastAPI):
     """Startup and shutdown lifecycle management."""
     setup_logging(settings.log_level)
-    log.info("vaaniflow_starting", version="1.0.0", env=settings.environment)
+    log.info("vaaniflow_starting", version="2.0.0", env=settings.environment)
     yield
     log.info("vaaniflow_shutting_down")
 
@@ -28,7 +29,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="VaaniFlow",
     description="Multilingual async dubbing pipeline API — supports 11 Indian languages",
-    version="1.0.0",
+    version="2.0.0",
     lifespan=lifespan,
 )
 
@@ -43,6 +44,7 @@ app.add_middleware(LoggingMiddleware)
 app.include_router(health.router, prefix="/health", tags=["health"])
 app.include_router(jobs.router, prefix="/jobs", tags=["jobs"])
 app.include_router(metrics.router, tags=["observability"])
+app.include_router(stats.router, tags=["cost-optimization"])
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):

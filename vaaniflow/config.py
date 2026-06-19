@@ -54,6 +54,10 @@ class Settings(BaseSettings):
     qc_max_silence_ratio: float = Field(default=0.7, alias="QC_MAX_SILENCE_RATIO")
     qc_max_length_ratio: float = Field(default=3.0, alias="QC_MAX_LENGTH_RATIO")
 
+    # Phase 3: Showcase features
+    lipsync_export_enabled: bool = Field(default=False, alias="LIPSYNC_EXPORT_ENABLED")
+    code_switch_normalization_enabled: bool = Field(default=True, alias="CODE_SWITCH_NORMALIZATION_ENABLED")
+
     model_config = {
         "env_file": ".env",
         "env_file_encoding": "utf-8",

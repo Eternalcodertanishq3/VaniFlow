@@ -44,6 +44,8 @@ from vaaniflow.pronunciation.corrector import IndianNamePronunciationCorrector
 from vaaniflow.audio.ambient_separator import AmbientAudioPreserver
 from vaaniflow.qc.pipeline import QualityController
 from vaaniflow.qc.models import QCConfig, QCStatus
+from vaaniflow.cost import cost_tracker
+from vaaniflow.lipsync import LipSyncExporter
 from vaaniflow.metrics import (
     JOBS_TOTAL, ACTIVE_JOBS, PIPELINE_STAGE_DURATION,
     TRANSLATION_CACHE_HITS, TRANSLATION_CACHE_MISSES,
@@ -100,6 +102,10 @@ class VaaniFlowPipeline:
                 max_silence_ratio=settings.qc_max_silence_ratio,
                 max_length_ratio=settings.qc_max_length_ratio,
             )
+        )
+        self.lipsync_exporter = LipSyncExporter(
+            enabled=settings.lipsync_export_enabled,
+            output_dir=settings.output_dir,
         )
 
     async def run(self, job: DubbingJob, input_path: Path) -> Path:
@@ -210,6 +216,23 @@ class VaaniFlowPipeline:
                     output_path.write_bytes(remixed)
                     log.info("ambient_remixed")
 
+            # Stage 7: Lip-sync manifest export (Phase 3)
+            if settings.lipsync_export_enabled:
+                with PIPELINE_STAGE_DURATION.labels("lipsync_export").time():
+                    await self.lipsync_exporter.export(
+                        segments=tts_result.segments,
+                        job_id=job.job_id,
+                        dubbed_audio_path=output_path,
+                        source_language=str(job.config.source_language),
+                        target_language=str(job.config.target_language),
+                        total_duration_ms=transcription.total_duration_ms,
+                        original_video_path=input_path,
+                    )
+
+            # Record cost metrics
+            cost_tracker.record_segments(len(tts_result.segments))
+            cost_tracker.record_job_completed()
+
             await self._update_status(job, JobStatus.COMPLETED, 100.0)
             JOBS_TOTAL.labels("completed").inc()
             log.info("pipeline_completed", output=str(output_path))
@@ -254,6 +277,7 @@ class VaaniFlowPipeline:
                 cached_results[segment.index] = cached
                 cache_hits += 1
                 TRANSLATION_CACHE_HITS.inc()
+                cost_tracker.record_cache_hit()
                 log.debug("translation_cache_hit", segment_index=segment.index)
             else:
                 texts_to_translate.append((segment.index, segment.original_text, cache_key))
@@ -264,6 +288,9 @@ class VaaniFlowPipeline:
             indices, texts, keys = zip(*texts_to_translate)
             translated = await provider.translate_batch(
                 list(texts), config.source_language, config.target_language
+            )
+            cost_tracker.record_translation_call(
+                str(config.translation_provider.value), len(texts)
             )
             for idx, key, result in zip(indices, keys, translated):
                 cached_results[idx] = result
@@ -413,6 +440,7 @@ class VaaniFlowPipeline:
         try:
             result = await primary.synthesize_with_logging(request)
             TTS_AUDIO_BYTES.labels(provider=primary.provider_name).observe(len(result.audio_bytes))
+            cost_tracker.record_tts_call(primary.provider_name)
             return result.audio_bytes
         except Exception as e:
             log.warning(
