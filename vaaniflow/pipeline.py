@@ -432,8 +432,8 @@ class VaaniFlowPipeline:
     async def _update_status(job: DubbingJob, status: JobStatus, progress: float):
         job.status = status
         job.progress_pct = progress
-        from datetime import datetime
-        job.updated_at = datetime.utcnow()
+        from datetime import datetime, timezone
+        job.updated_at = datetime.now(timezone.utc)
 
     async def _extract_segment_audio(self, audio_path: Path, segment: AudioSegment) -> bytes:
         """Extract a segment's audio from the main 16kHz mono WAV file."""
