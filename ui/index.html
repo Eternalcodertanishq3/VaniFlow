@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VaaniFlow — Dubbing Demo</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #FAFAF8;
+    color: #1A1A1A;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .card {
+    width: 100%;
+    max-width: 560px;
+    background: #FFFFFF;
+    border-radius: 20px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+    padding: 40px;
+  }
+  .logo-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .logo-dot { width: 10px; height: 10px; border-radius: 50%; background: #4F46E5; }
+  h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  .subtitle { font-size: 14px; color: #6B6B6B; margin-bottom: 32px; margin-top: 4px; }
+
+  .dropzone {
+    border: 1.5px dashed #D8D8D4;
+    border-radius: 14px;
+    padding: 32px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    margin-bottom: 20px;
+  }
+  .dropzone:hover, .dropzone.dragover { border-color: #4F46E5; background: #F5F4FF; }
+  .dropzone-icon { font-size: 28px; margin-bottom: 8px; }
+  .dropzone-text { font-size: 14px; color: #444; }
+  .dropzone-sub { font-size: 12px; color: #999; margin-top: 4px; }
+  .file-chip {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    background: #F5F4FF;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: #4F46E5;
+    margin-bottom: 20px;
+  }
+  .file-chip.show { display: flex; }
+
+  .field-row { display: flex; gap: 12px; margin-bottom: 20px; }
+  .field { flex: 1; }
+  label { display: block; font-size: 12px; font-weight: 600; color: #555; margin-bottom: 6px; }
+  select {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid #E2E2DE;
+    background: #FAFAF8;
+    font-size: 14px;
+    color: #1A1A1A;
+    cursor: pointer;
+  }
+  select:focus { outline: none; border-color: #4F46E5; }
+
+  button.primary {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 12px;
+    background: #4F46E5;
+    color: white;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, opacity 0.15s;
+  }
+  button.primary:hover:not(:disabled) { background: #433CC9; }
+  button.primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .status-area { margin-top: 28px; display: none; }
+  .status-area.show { display: block; }
+  .stage-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .pulse-dot {
+    width: 8px; height: 8px; border-radius: 50%; background: #4F46E5;
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity: 0.3; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.1); } }
+  .stage-label { font-size: 14px; font-weight: 600; color: #1A1A1A; }
+  .progress-track { width: 100%; height: 8px; background: #EFEFEC; border-radius: 4px; overflow: hidden; }
+  .progress-fill {
+    height: 100%; background: #4F46E5; border-radius: 4px;
+    transition: width 0.5s ease; width: 0%;
+  }
+  .progress-pct { font-size: 12px; color: #999; margin-top: 6px; text-align: right; }
+
+  .result-area { margin-top: 24px; display: none; }
+  .result-area.show { display: block; }
+  .result-card {
+    background: #F0FBF4; border: 1px solid #C8EDD4; border-radius: 14px;
+    padding: 20px; text-align: center;
+  }
+  .result-icon { font-size: 28px; margin-bottom: 8px; }
+  audio { width: 100%; margin: 14px 0; }
+  a.download-btn {
+    display: inline-block; padding: 10px 20px; background: #1A1A1A; color: white;
+    border-radius: 10px; font-size: 13px; font-weight: 600; text-decoration: none;
+  }
+
+  .error-area { margin-top: 24px; display: none; }
+  .error-area.show { display: block; }
+  .error-card {
+    background: #FDF2F2; border: 1px solid #F5C6C6; border-radius: 14px;
+    padding: 18px; font-size: 13px; color: #B42318;
+  }
+  button.retry {
+    margin-top: 12px; padding: 8px 16px; background: white; border: 1px solid #F5C6C6;
+    border-radius: 8px; color: #B42318; font-size: 13px; font-weight: 600; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="logo-row">
+    <div class="logo-dot"></div>
+    <h1>vaaniflow</h1>
+  </div>
+  <p class="subtitle">Multilingual async dubbing pipeline — 11 Indian languages</p>
+
+  <form id="dubForm">
+    <div class="dropzone" id="dropzone">
+      <div class="dropzone-icon">&#127908;</div>
+      <div class="dropzone-text">Drop an audio or video file, or click to browse</div>
+      <div class="dropzone-sub">MP3, WAV, MP4 supported</div>
+      <input type="file" id="fileInput" accept="audio/*,video/*" hidden>
+    </div>
+    <div class="file-chip" id="fileChip">
+      <span>&#128196;</span>
+      <span id="fileName"></span>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Target language</label>
+        <select id="targetLang">
+          <option value="hi">Hindi</option>
+          <option value="bn">Bengali</option>
+          <option value="te">Telugu</option>
+          <option value="mr">Marathi</option>
+          <option value="ta">Tamil</option>
+          <option value="gu">Gujarati</option>
+          <option value="kn">Kannada</option>
+          <option value="ml">Malayalam</option>
+          <option value="pa">Punjabi</option>
+          <option value="or">Odia</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>TTS provider</label>
+        <select id="ttsProvider">
+          <option value="sarvam">Sarvam AI</option>
+          <option value="elevenlabs">ElevenLabs</option>
+          <option value="gtts">gTTS (free)</option>
+        </select>
+      </div>
+    </div>
+
+    <button type="submit" class="primary" id="submitBtn">Start dubbing</button>
+  </form>
+
+  <div class="status-area" id="statusArea">
+    <div class="stage-row">
+      <div class="pulse-dot"></div>
+      <div class="stage-label" id="stageLabel">Queued</div>
+    </div>
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="progress-pct" id="progressPct">0%</div>
+  </div>
+
+  <div class="result-area" id="resultArea">
+    <div class="result-card">
+      <div class="result-icon">&#9989;</div>
+      <div style="font-weight:600;">Dubbing complete</div>
+      <audio controls id="audioPlayer"></audio>
+      <a class="download-btn" id="downloadBtn" href="#">Download audio</a>
+    </div>
+  </div>
+
+  <div class="error-area" id="errorArea">
+    <div class="error-card">
+      <div style="font-weight:600; margin-bottom:4px;">Something went wrong</div>
+      <div id="errorMessage"></div>
+      <button class="retry" id="retryBtn">Try again</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API_BASE = "http://localhost:8000";
+const STAGE_LABELS = {
+  pending: "Queued",
+  transcribing: "Transcribing audio",
+  translating: "Translating text",
+  synthesizing: "Generating speech",
+  stitching: "Stitching final audio",
+  completed: "Done",
+  failed: "Failed",
+};
+
+const dropzone = document.getElementById("dropzone");
+const fileInput = document.getElementById("fileInput");
+const fileChip = document.getElementById("fileChip");
+const fileName = document.getElementById("fileName");
+const form = document.getElementById("dubForm");
+const submitBtn = document.getElementById("submitBtn");
+const statusArea = document.getElementById("statusArea");
+const stageLabel = document.getElementById("stageLabel");
+const progressFill = document.getElementById("progressFill");
+const progressPct = document.getElementById("progressPct");
+const resultArea = document.getElementById("resultArea");
+const audioPlayer = document.getElementById("audioPlayer");
+const downloadBtn = document.getElementById("downloadBtn");
+const errorArea = document.getElementById("errorArea");
+const errorMessage = document.getElementById("errorMessage");
+const retryBtn = document.getElementById("retryBtn");
+
+let selectedFile = null;
+let pollTimer = null;
+
+dropzone.addEventListener("click", () => fileInput.click());
+dropzone.addEventListener("dragover", (e) => { e.preventDefault(); dropzone.classList.add("dragover"); });
+dropzone.addEventListener("dragleave", () => dropzone.classList.remove("dragover"));
+dropzone.addEventListener("drop", (e) => {
+  e.preventDefault();
+  dropzone.classList.remove("dragover");
+  if (e.dataTransfer.files.length) setFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener("change", () => {
+  if (fileInput.files.length) setFile(fileInput.files[0]);
+});
+
+function setFile(file) {
+  selectedFile = file;
+  fileName.textContent = file.name;
+  fileChip.classList.add("show");
+}
+
+function resetUI() {
+  statusArea.classList.remove("show");
+  resultArea.classList.remove("show");
+  errorArea.classList.remove("show");
+  progressFill.style.width = "0%";
+  progressPct.textContent = "0%";
+  submitBtn.disabled = false;
+  submitBtn.textContent = "Start dubbing";
+  if (pollTimer) clearInterval(pollTimer);
+}
+
+retryBtn.addEventListener("click", resetUI);
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (!selectedFile) {
+    alert("Please select a file first");
+    return;
+  }
+
+  resetUI();
+  submitBtn.disabled = true;
+  submitBtn.textContent = "Uploading...";
+
+  const formData = new FormData();
+  formData.append("file", selectedFile);
+  formData.append("target_language", document.getElementById("targetLang").value);
+  formData.append("source_language", "en");
+  formData.append("tts_provider", document.getElementById("ttsProvider").value);
+
+  try {
+    const res = await fetch(`${API_BASE}/jobs/`, { method: "POST", body: formData });
+    if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
+    const data = await res.json();
+    statusArea.classList.add("show");
+    pollJob(data.job_id);
+  } catch (err) {
+    showError(err.message);
+  }
+});
+
+function pollJob(jobId) {
+  pollTimer = setInterval(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/jobs/${jobId}`);
+      const data = await res.json();
+
+      stageLabel.textContent = STAGE_LABELS[data.status] || data.status;
+      progressFill.style.width = `${data.progress_pct}%`;
+      progressPct.textContent = `${Math.round(data.progress_pct)}%`;
+
+      if (data.status === "completed") {
+        clearInterval(pollTimer);
+        statusArea.classList.remove("show");
+        resultArea.classList.add("show");
+        const downloadUrl = `${API_BASE}${data.output_url}`;
+        audioPlayer.src = downloadUrl;
+        downloadBtn.href = downloadUrl;
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Start dubbing";
+      } else if (data.status === "failed") {
+        clearInterval(pollTimer);
+        showError(data.error || "Pipeline failed for an unknown reason");
+      }
+    } catch (err) {
+      clearInterval(pollTimer);
+      showError("Lost connection to the server");
+    }
+  }, 1500);
+}
+
+function showError(message) {
+  statusArea.classList.remove("show");
+  errorArea.classList.add("show");
+  errorMessage.textContent = message;
+  submitBtn.disabled = false;
+  submitBtn.textContent = "Start dubbing";
+}
+</script>
+
+</body>
+</html>
