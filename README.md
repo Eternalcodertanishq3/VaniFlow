@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/logo.svg" alt="VaaniFlow Logo">
+  <img src="assets/logo.svg?v=2" alt="VaaniFlow Logo" width="600">
 </p>
 
 # 🎙️ VaaniFlow
