@@ -329,7 +329,7 @@ JSON-structured logging with `contextvars` means every log event in a pipeline r
 ## 🧪 Running Tests
 
 ```bash
-# All tests (98 tests)
+# All tests (132 tests)
 pytest -v
 
 # Unit tests only
