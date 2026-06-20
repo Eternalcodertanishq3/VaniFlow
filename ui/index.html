@@ -8,149 +8,194 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background: #FAFAF8;
-    color: #1A1A1A;
+    background: #EFEDE7;
     min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 24px;
+    padding: 32px 16px;
   }
-  .card {
-    width: 100%;
-    max-width: 560px;
-    background: #FFFFFF;
-    border-radius: 20px;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.06);
-    padding: 40px;
-  }
-  .logo-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-  .logo-dot { width: 10px; height: 10px; border-radius: 50%; background: #4F46E5; }
-  h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
-  .subtitle { font-size: 14px; color: #6B6B6B; margin-bottom: 32px; margin-top: 4px; }
 
-  .dropzone {
-    border: 1.5px dashed #D8D8D4;
-    border-radius: 14px;
-    padding: 32px 20px;
-    text-align: center;
-    cursor: pointer;
-    transition: border-color 0.15s, background 0.15s;
-    margin-bottom: 20px;
+  .clay-card {
+    width: 100%;
+    max-width: 480px;
+    background: #FAF9F5;
+    border-radius: 28px;
+    box-shadow:
+      0 1px 2px rgba(20,18,12,0.04),
+      0 8px 24px rgba(20,18,12,0.08),
+      0 24px 48px -12px rgba(20,18,12,0.10),
+      inset 0 1px 0 rgba(255,255,255,0.6);
+    padding: 36px;
   }
-  .dropzone:hover, .dropzone.dragover { border-color: #4F46E5; background: #F5F4FF; }
-  .dropzone-icon { font-size: 28px; margin-bottom: 8px; }
-  .dropzone-text { font-size: 14px; color: #444; }
-  .dropzone-sub { font-size: 12px; color: #999; margin-top: 4px; }
+
+  .brand-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .brand-orb {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: radial-gradient(circle at 32% 28%, #8B7FF0, #4F46E5 70%);
+    box-shadow: 0 2px 6px rgba(79,70,229,0.35), inset 0 1px 1px rgba(255,255,255,0.5);
+    position: relative; flex-shrink: 0;
+  }
+  .brand-orb::after {
+    content: ''; position: absolute; width: 8px; height: 8px; border-radius: 50%;
+    background: rgba(255,255,255,0.55); top: 5px; left: 6px;
+  }
+  .brand-name { font-size: 21px; font-weight: 600; letter-spacing: -0.02em; color: #1C1A14; }
+  .brand-sub { font-size: 13px; color: #8C8678; margin: 0 0 28px 40px; }
+
+  .dz {
+    border-radius: 22px; background: #F2F0E9;
+    box-shadow: inset 0 2px 5px rgba(20,18,12,0.07), inset 0 -1px 0 rgba(255,255,255,0.5);
+    padding: 34px 20px; text-align: center; cursor: pointer;
+    transition: box-shadow .25s, transform .15s;
+    position: relative; overflow: hidden; margin-bottom: 22px;
+  }
+  .dz:hover, .dz.dragover {
+    box-shadow: inset 0 2px 5px rgba(20,18,12,0.07), inset 0 -1px 0 rgba(255,255,255,0.5), 0 0 0 2px rgba(79,70,229,0.18);
+  }
+  .dz:active { transform: scale(0.99); }
+  .dz-icon-wrap {
+    width: 52px; height: 52px; border-radius: 18px; background: #FAF9F5;
+    box-shadow: 0 1px 1px rgba(20,18,12,0.05), 0 4px 10px rgba(20,18,12,0.08), inset 0 1px 0 rgba(255,255,255,0.7);
+    display: flex; align-items: center; justify-content: center; margin: 0 auto 14px;
+    animation: floaty 3.4s ease-in-out infinite; font-size: 22px; color: #4F46E5;
+  }
+  @keyframes floaty { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+  .dz-text { font-size: 14.5px; color: #3A372E; font-weight: 500; }
+  .dz-sub { font-size: 12px; color: #A7A192; margin-top: 4px; }
+
   .file-chip {
-    display: none;
-    align-items: center;
-    gap: 8px;
-    background: #F5F4FF;
-    border-radius: 10px;
-    padding: 10px 14px;
-    font-size: 13px;
-    color: #4F46E5;
-    margin-bottom: 20px;
+    display: none; align-items: center; gap: 10px;
+    background: #F2F0E9; border-radius: 16px; padding: 12px 16px;
+    box-shadow: inset 0 1px 3px rgba(20,18,12,0.06);
+    margin-bottom: 22px; font-size: 13px; color: #3A372E; font-weight: 500;
   }
   .file-chip.show { display: flex; }
+  .file-chip i { color: #4F46E5; font-size: 18px; }
 
-  .field-row { display: flex; gap: 12px; margin-bottom: 20px; }
-  .field { flex: 1; }
-  label { display: block; font-size: 12px; font-weight: 600; color: #555; margin-bottom: 6px; }
-  select {
-    width: 100%;
-    padding: 10px 12px;
-    border-radius: 10px;
-    border: 1px solid #E2E2DE;
-    background: #FAFAF8;
-    font-size: 14px;
-    color: #1A1A1A;
-    cursor: pointer;
+  .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 22px; }
+  .field label {
+    display: block; font-size: 11.5px; font-weight: 600; color: #9A9384;
+    text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px;
   }
-  select:focus { outline: none; border-color: #4F46E5; }
-
-  button.primary {
-    width: 100%;
-    padding: 14px;
-    border: none;
-    border-radius: 12px;
-    background: #4F46E5;
-    color: white;
-    font-size: 15px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.15s, opacity 0.15s;
+  .claySelect {
+    width: 100%; padding: 13px 14px; border-radius: 16px; background: #F2F0E9;
+    box-shadow: inset 0 2px 4px rgba(20,18,12,0.06), inset 0 -1px 0 rgba(255,255,255,0.5);
+    border: none; font-size: 14px; color: #1C1A14; font-weight: 500; cursor: pointer;
+    appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8'><path d='M1 1l5 5 5-5' stroke='%23938C7C' stroke-width='1.6' fill='none' stroke-linecap='round'/></svg>");
+    background-repeat: no-repeat; background-position: right 14px center;
   }
-  button.primary:hover:not(:disabled) { background: #433CC9; }
-  button.primary:disabled { opacity: 0.5; cursor: not-allowed; }
+  .claySelect:focus {
+    outline: none;
+    box-shadow: inset 0 2px 4px rgba(20,18,12,0.06), 0 0 0 2px rgba(79,70,229,0.3);
+  }
 
-  .status-area { margin-top: 28px; display: none; }
-  .status-area.show { display: block; }
+  .btn-primary {
+    width: 100%; padding: 16px; border: none; border-radius: 18px;
+    background: linear-gradient(180deg, #6660F0, #4F46E5); color: #fff;
+    font-size: 15px; font-weight: 600; cursor: pointer; letter-spacing: 0.01em;
+    box-shadow: 0 1px 1px rgba(79,70,229,0.3), 0 6px 16px rgba(79,70,229,0.35), inset 0 1px 0 rgba(255,255,255,0.25);
+    transition: transform .12s, box-shadow .2s, opacity .2s;
+  }
+  .btn-primary:hover:not(:disabled) {
+    box-shadow: 0 1px 1px rgba(79,70,229,0.3), 0 8px 20px rgba(79,70,229,0.45), inset 0 1px 0 rgba(255,255,255,0.3);
+    transform: translateY(-1px);
+  }
+  .btn-primary:active:not(:disabled) { transform: translateY(0) scale(0.98); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  .status-card {
+    margin-top: 22px; background: #F2F0E9; border-radius: 20px; padding: 20px;
+    box-shadow: inset 0 1px 3px rgba(20,18,12,0.05);
+    display: none;
+  }
+  .status-card.show { display: block; animation: slideIn .35s ease; }
+  @keyframes slideIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
   .stage-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
-  .pulse-dot {
-    width: 8px; height: 8px; border-radius: 50%; background: #4F46E5;
-    animation: pulse 1.4s ease-in-out infinite;
+  .dot-pulse {
+    width: 9px; height: 9px; border-radius: 50%; background: #4F46E5;
+    animation: dotpulse 1.6s ease-out infinite;
   }
-  @keyframes pulse { 0%,100% { opacity: 0.3; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.1); } }
-  .stage-label { font-size: 14px; font-weight: 600; color: #1A1A1A; }
-  .progress-track { width: 100%; height: 8px; background: #EFEFEC; border-radius: 4px; overflow: hidden; }
-  .progress-fill {
-    height: 100%; background: #4F46E5; border-radius: 4px;
-    transition: width 0.5s ease; width: 0%;
+  @keyframes dotpulse {
+    0% { box-shadow: 0 0 0 0 rgba(79,70,229,0.45); }
+    70% { box-shadow: 0 0 0 9px rgba(79,70,229,0); }
+    100% { box-shadow: 0 0 0 0 rgba(79,70,229,0); }
   }
-  .progress-pct { font-size: 12px; color: #999; margin-top: 6px; text-align: right; }
+  .stage-name { font-size: 14px; font-weight: 600; color: #1C1A14; }
+  .ptrack {
+    width: 100%; height: 10px; border-radius: 8px; background: #E5E2D9;
+    box-shadow: inset 0 1px 3px rgba(20,18,12,0.1); overflow: hidden;
+  }
+  .pfill {
+    height: 100%; border-radius: 8px; background: linear-gradient(90deg, #7A72F2, #4F46E5);
+    width: 0%; box-shadow: 0 0 8px rgba(79,70,229,0.45); transition: width .6s ease;
+  }
+  .ppct { font-size: 12px; color: #9A9384; margin-top: 8px; text-align: right; font-weight: 500; }
 
-  .result-area { margin-top: 24px; display: none; }
-  .result-area.show { display: block; }
   .result-card {
-    background: #F0FBF4; border: 1px solid #C8EDD4; border-radius: 14px;
-    padding: 20px; text-align: center;
+    margin-top: 22px; background: #EAF6EE; border-radius: 20px; padding: 22px; text-align: center;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 1px 2px rgba(20,18,12,0.04);
+    display: none;
   }
-  .result-icon { font-size: 28px; margin-bottom: 8px; }
+  .result-card.show { display: block; animation: slideIn .4s ease; }
+  .check-wrap {
+    width: 48px; height: 48px; border-radius: 50%; background: #fff;
+    box-shadow: 0 2px 8px rgba(34,139,89,0.25);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 10px; animation: popin .4s cubic-bezier(.34,1.56,.64,1);
+    font-size: 22px; color: #228B59;
+  }
+  @keyframes popin { 0% { transform: scale(0); } 100% { transform: scale(1); } }
+  .result-title { font-weight: 600; font-size: 15px; color: #1F4D33; margin-bottom: 6px; }
   audio { width: 100%; margin: 14px 0; }
-  a.download-btn {
-    display: inline-block; padding: 10px 20px; background: #1A1A1A; color: white;
-    border-radius: 10px; font-size: 13px; font-weight: 600; text-decoration: none;
+  .dl-btn {
+    display: inline-block; padding: 11px 22px; background: #1C1A14; color: #fff;
+    border-radius: 14px; font-size: 13px; font-weight: 600; text-decoration: none;
+    box-shadow: 0 4px 10px rgba(20,18,12,0.2);
   }
 
-  .error-area { margin-top: 24px; display: none; }
-  .error-area.show { display: block; }
   .error-card {
-    background: #FDF2F2; border: 1px solid #F5C6C6; border-radius: 14px;
-    padding: 18px; font-size: 13px; color: #B42318;
+    margin-top: 22px; background: #FBEAEA; border-radius: 20px; padding: 20px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
+    font-size: 13px; color: #8A2A2A; display: none;
   }
-  button.retry {
-    margin-top: 12px; padding: 8px 16px; background: white; border: 1px solid #F5C6C6;
-    border-radius: 8px; color: #B42318; font-size: 13px; font-weight: 600; cursor: pointer;
+  .error-card.show { display: block; animation: slideIn .35s ease; }
+  .error-title { font-weight: 600; margin-bottom: 4px; font-size: 14px; }
+  .retry-btn {
+    margin-top: 12px; padding: 9px 18px; background: #fff; border: none;
+    border-radius: 12px; color: #8A2A2A; font-size: 13px; font-weight: 600;
+    cursor: pointer; box-shadow: 0 2px 6px rgba(20,18,12,0.08);
   }
 </style>
 </head>
 <body>
 
-<div class="card">
-  <div class="logo-row">
-    <div class="logo-dot"></div>
-    <h1>vaaniflow</h1>
+<div class="clay-card">
+  <div class="brand-row">
+    <div class="brand-orb"></div>
+    <div class="brand-name">vaaniflow</div>
   </div>
-  <p class="subtitle">Multilingual async dubbing pipeline — 11 Indian languages</p>
+  <div class="brand-sub">multilingual async dubbing pipeline · 11 indian languages</div>
 
   <form id="dubForm">
-    <div class="dropzone" id="dropzone">
-      <div class="dropzone-icon">&#127908;</div>
-      <div class="dropzone-text">Drop an audio or video file, or click to browse</div>
-      <div class="dropzone-sub">MP3, WAV, MP4 supported</div>
+    <div class="dz" id="dropzone">
+      <div class="dz-icon-wrap">&#127908;</div>
+      <div class="dz-text">drop an audio or video file</div>
+      <div class="dz-sub">mp3, wav, mp4 supported</div>
       <input type="file" id="fileInput" accept="audio/*,video/*" hidden>
     </div>
+
     <div class="file-chip" id="fileChip">
       <span>&#128196;</span>
       <span id="fileName"></span>
     </div>
 
-    <div class="field-row">
+    <div class="field-grid">
       <div class="field">
-        <label>Target language</label>
-        <select id="targetLang">
+        <label>target language</label>
+        <select class="claySelect" id="targetLang">
           <option value="hi">Hindi</option>
           <option value="bn">Bengali</option>
           <option value="te">Telugu</option>
@@ -164,8 +209,8 @@
         </select>
       </div>
       <div class="field">
-        <label>TTS provider</label>
-        <select id="ttsProvider">
+        <label>tts provider</label>
+        <select class="claySelect" id="ttsProvider">
           <option value="sarvam">Sarvam AI</option>
           <option value="elevenlabs">ElevenLabs</option>
           <option value="gtts">gTTS (free)</option>
@@ -173,33 +218,29 @@
       </div>
     </div>
 
-    <button type="submit" class="primary" id="submitBtn">Start dubbing</button>
+    <button type="submit" class="btn-primary" id="submitBtn">start dubbing</button>
   </form>
 
-  <div class="status-area" id="statusArea">
+  <div class="status-card" id="statusArea">
     <div class="stage-row">
-      <div class="pulse-dot"></div>
-      <div class="stage-label" id="stageLabel">Queued</div>
+      <div class="dot-pulse"></div>
+      <div class="stage-name" id="stageLabel">Queued</div>
     </div>
-    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
-    <div class="progress-pct" id="progressPct">0%</div>
+    <div class="ptrack"><div class="pfill" id="progressFill"></div></div>
+    <div class="ppct" id="progressPct">0%</div>
   </div>
 
-  <div class="result-area" id="resultArea">
-    <div class="result-card">
-      <div class="result-icon">&#9989;</div>
-      <div style="font-weight:600;">Dubbing complete</div>
-      <audio controls id="audioPlayer"></audio>
-      <a class="download-btn" id="downloadBtn" href="#">Download audio</a>
-    </div>
+  <div class="result-card" id="resultArea">
+    <div class="check-wrap">&#10003;</div>
+    <div class="result-title">dubbing complete</div>
+    <audio controls id="audioPlayer"></audio>
+    <a class="dl-btn" id="downloadBtn" href="#">download audio</a>
   </div>
 
-  <div class="error-area" id="errorArea">
-    <div class="error-card">
-      <div style="font-weight:600; margin-bottom:4px;">Something went wrong</div>
-      <div id="errorMessage"></div>
-      <button class="retry" id="retryBtn">Try again</button>
-    </div>
+  <div class="error-card" id="errorArea">
+    <div class="error-title">something went wrong</div>
+    <div id="errorMessage"></div>
+    <button class="retry-btn" id="retryBtn">try again</button>
   </div>
 </div>
 
@@ -260,7 +301,7 @@ function resetUI() {
   progressFill.style.width = "0%";
   progressPct.textContent = "0%";
   submitBtn.disabled = false;
-  submitBtn.textContent = "Start dubbing";
+  submitBtn.textContent = "start dubbing";
   if (pollTimer) clearInterval(pollTimer);
 }
 
@@ -275,7 +316,7 @@ form.addEventListener("submit", async (e) => {
 
   resetUI();
   submitBtn.disabled = true;
-  submitBtn.textContent = "Uploading...";
+  submitBtn.textContent = "uploading...";
 
   const formData = new FormData();
   formData.append("file", selectedFile);
@@ -312,7 +353,7 @@ function pollJob(jobId) {
         audioPlayer.src = downloadUrl;
         downloadBtn.href = downloadUrl;
         submitBtn.disabled = false;
-        submitBtn.textContent = "Start dubbing";
+        submitBtn.textContent = "start dubbing";
       } else if (data.status === "failed") {
         clearInterval(pollTimer);
         showError(data.error || "Pipeline failed for an unknown reason");
@@ -329,7 +370,7 @@ function showError(message) {
   errorArea.classList.add("show");
   errorMessage.textContent = message;
   submitBtn.disabled = false;
-  submitBtn.textContent = "Start dubbing";
+  submitBtn.textContent = "start dubbing";
 }
 </script>
 
