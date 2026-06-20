@@ -46,6 +46,7 @@ from vaaniflow.qc.pipeline import QualityController
 from vaaniflow.qc.models import QCConfig, QCStatus
 from vaaniflow.cost import cost_tracker
 from vaaniflow.lipsync import LipSyncExporter
+from vaaniflow.subtitles import SubtitleGenerator
 from vaaniflow.metrics import (
     JOBS_TOTAL, ACTIVE_JOBS, PIPELINE_STAGE_DURATION,
     TRANSLATION_CACHE_HITS, TRANSLATION_CACHE_MISSES,
@@ -105,6 +106,10 @@ class VaaniFlowPipeline:
         )
         self.lipsync_exporter = LipSyncExporter(
             enabled=settings.lipsync_export_enabled,
+            output_dir=settings.output_dir,
+        )
+        self.subtitle_generator = SubtitleGenerator(
+            enabled=settings.subtitle_generation_enabled,
             output_dir=settings.output_dir,
         )
 
@@ -215,6 +220,13 @@ class VaaniFlowPipeline:
                     remixed = await self.ambient_preserver.remix(dubbed_bytes, ambient_bytes)
                     output_path.write_bytes(remixed)
                     log.info("ambient_remixed")
+
+            # Stage 6.7: Subtitle generation
+            if settings.subtitle_generation_enabled:
+                with PIPELINE_STAGE_DURATION.labels("subtitle_generate").time():
+                    srt_path = self.subtitle_generator.generate_srt(tts_result.segments, job.job_id)
+                    vtt_path = self.subtitle_generator.generate_vtt(tts_result.segments, job.job_id)
+                    log.info("subtitles_generated", srt=str(srt_path), vtt=str(vtt_path))
 
             # Stage 7: Lip-sync manifest export (Phase 3)
             if settings.lipsync_export_enabled:

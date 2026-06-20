@@ -57,6 +57,7 @@ class Settings(BaseSettings):
     # Phase 3: Showcase features
     lipsync_export_enabled: bool = Field(default=False, alias="LIPSYNC_EXPORT_ENABLED")
     code_switch_normalization_enabled: bool = Field(default=True, alias="CODE_SWITCH_NORMALIZATION_ENABLED")
+    subtitle_generation_enabled: bool = Field(default=True, alias="SUBTITLE_GENERATION_ENABLED")
 
     model_config = {
         "env_file": ".env",

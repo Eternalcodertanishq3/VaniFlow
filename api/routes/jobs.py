@@ -108,6 +108,23 @@ async def download_result(job_id: str):
     )
 
 
+@router.get("/{job_id}/subtitles/{format}")
+async def download_subtitles(job_id: str, format: str):
+    """Download SRT or VTT subtitles. format: 'srt' or 'vtt'"""
+    if format not in ("srt", "vtt"):
+        raise HTTPException(status_code=400, detail="Format must be 'srt' or 'vtt'")
+    job = await job_repo.get(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    subtitle_path = Path(settings.output_dir) / f"{job_id}.{format}"
+    if not subtitle_path.exists():
+        raise HTTPException(status_code=404, detail=f"{format.upper()} file not found")
+
+    media_type = "text/srt" if format == "srt" else "text/vtt"
+    return FileResponse(subtitle_path, media_type=media_type, filename=f"{job_id}.{format}")
+
+
 @router.get("/", response_model=list[DubbingJobResponse])
 async def list_jobs():
     """List all dubbing jobs."""

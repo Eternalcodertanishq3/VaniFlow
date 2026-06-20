@@ -67,7 +67,7 @@ Most dubbing pipelines just translate words. **VaaniFlow preserves the soul of t
 | Feature | What It Does | Why It Matters |
 |---------|-------------|----------------|
 | 😊 **EmotionPreserver** | Detects pitch, energy, tempo from original audio → injects speaking rate + pitch into TTS | Dubbed audio *feels* the same — angry stays angry, sad stays sad |
-| 🔄 **BackTranslationQualityScorer** | Back-translates to source → BLEU score → auto-retries with alt provider if quality fails | Catches hallucinated/broken translations before they reach TTS |
+| 🔄 **BackTranslationQualityScorer** | Back-translates to source → dual-scores with BLEU + multilingual sentence-embedding cosine similarity → retries only if BOTH fail | Embedding similarity catches valid paraphrases BLEU wrongly penalizes; BLEU catches lexical/numeric errors embeddings might miss |
 | ✂️ **SmartSegmentBoundaryOptimizer** | Merges fragmented Whisper segments using spaCy sentence tokenization | "The quick brown fox" + "jumped over" → one segment = better translation |
 | 🗣️ **IndianNamePronunciationCorrector** | 60+ Indian names/places/brands → phonetic hints before TTS | "Bangalore" → "Baanga-lore" so TTS pronounces it correctly |
 | 🎵 **AmbientAudioPreserver** | Spectral subtraction separates background audio → re-layers after dubbing | Background music/ambient sounds survive the dubbing process |
@@ -490,6 +490,23 @@ REDIS_URL=redis://localhost:6379/0
                        │   🔊 Dubbed Audio    │
                        └──────────────────────┘
 ```
+
+---
+
+## ⚠️ Known Limitations & Next Steps
+
+Built thoughtfully, but honestly scoped. Here's what's production-grade vs.
+v1/architectural placeholder:
+
+| Component | Current State | What "Real" Looks Like | Status |
+|---|---|---|---|
+| **BackTranslationQualityScorer** | BLEU + multilingual embedding similarity (dual-metric) | Already upgraded past BLEU-only — embeddings catch valid paraphrases BLEU wrongly penalizes | ✅ Upgraded |
+| **Subtitle export** | SRT/VTT generation + optional burn-in | Production-ready, reuses existing segment timing | ✅ Built |
+| **EmotionPreserver** | Rule-based thresholds, validated against a small RAVDESS subset (see `scripts/validate_emotion_classifier.py`) | A trained classifier would generalize better; this is an honestly-measured v1 | ⚠️ Measured, not perfect |
+| **AmbientAudioPreserver** | scipy STFT spectral subtraction | Real source separation (Demucs/Spleeter) would isolate music/SFX more cleanly | ⚠️ Lightweight by design |
+| **LipSyncExporter** | Exports a JSON timing/emotion manifest only | No Wav2Lip/SyncTalk inference wired up — this is an integration point, not a working feature | 📋 Documented roadmap |
+
+I'd rather ship something honestly scoped than oversell a placeholder.
 
 ---
 

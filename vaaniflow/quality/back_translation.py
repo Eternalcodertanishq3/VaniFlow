@@ -22,6 +22,8 @@ import structlog
 from dataclasses import dataclass
 from typing import Optional
 
+from vaaniflow.quality.embedding_scorer import EmbeddingQualityScorer
+
 log = structlog.get_logger(__name__)
 
 
@@ -33,6 +35,8 @@ class BackTranslationScore:
     bleu_score: float           # 0.0 - 1.0
     passed: bool                # True if quality is acceptable
     should_retry: bool
+    embedding_similarity: float = 1.0
+    embedding_model_used: str = "disabled"
 
 
 class BackTranslationQualityScorer:
@@ -51,10 +55,14 @@ class BackTranslationQualityScorer:
             # retry with alternate provider
     """
 
-    def __init__(self, threshold: float = 0.30, enabled: bool = True):
+    def __init__(self, threshold: float = 0.30, enabled: bool = True,
+                 embedding_enabled: bool = True, embedding_threshold: float = 0.75):
         self.threshold = threshold
         self.enabled = enabled
         self._nltk_ready = False
+        self.embedding_scorer = EmbeddingQualityScorer(
+            threshold=embedding_threshold, enabled=embedding_enabled
+        )
 
     async def _ensure_nltk(self):
         """Lazy-load NLTK data for BLEU scoring."""
@@ -102,12 +110,14 @@ class BackTranslationQualityScorer:
 
             # Compute BLEU score
             bleu = await self._compute_bleu(original_text, back_translated)
-            passed = bleu >= self.threshold
+            
+            embedding_result = await self.embedding_scorer.score(original_text, back_translated)
+            passed = (bleu >= self.threshold) or embedding_result.passed
 
             log.info(
                 "back_translation_scored",
                 bleu=round(bleu, 3),
-                threshold=self.threshold,
+                embedding_similarity=round(embedding_result.cosine_similarity, 3),
                 passed=passed,
                 original_preview=original_text[:50],
                 back_translated_preview=back_translated[:50],
@@ -118,6 +128,8 @@ class BackTranslationQualityScorer:
                 translated_text=translated_text,
                 back_translated_text=back_translated,
                 bleu_score=bleu,
+                embedding_similarity=embedding_result.cosine_similarity,
+                embedding_model_used=embedding_result.model_used,
                 passed=passed,
                 should_retry=not passed,
             )
