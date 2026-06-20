@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.svg" alt="VaaniFlow Logo">
+</p>
+
 # 🎙️ VaaniFlow
 
 **Production-grade multilingual async dubbing pipeline** supporting 11 Indian languages.
