@@ -299,7 +299,9 @@ class VaaniFlowPipeline:
         if texts_to_translate:
             indices, texts, keys = zip(*texts_to_translate)
             translated = await provider.translate_batch(
-                list(texts), config.source_language, config.target_language
+                list(texts), config.source_language, config.target_language,
+                speaker_gender=config.speaker_gender,
+                translation_mode=config.translation_mode,
             )
             cost_tracker.record_translation_call(
                 str(config.translation_provider.value), len(texts)
@@ -352,6 +354,8 @@ class VaaniFlowPipeline:
                             segment.original_text,
                             config.source_language,
                             config.target_language,
+                            speaker_gender=config.speaker_gender,
+                            translation_mode=config.translation_mode,
                         )
                     except Exception as e:
                         log.warning(
@@ -373,6 +377,10 @@ class VaaniFlowPipeline:
     ) -> TTSResult:
         primary_provider = self.tts_providers[config.tts_provider]
         fallback_provider = self.tts_providers[TTSProvider.GTTS]
+
+        # Set loudness from job config on Sarvam TTS provider
+        if hasattr(primary_provider, 'default_loudness'):
+            primary_provider.default_loudness = config.loudness
 
         synthesized_segments = []
         total_bytes = 0

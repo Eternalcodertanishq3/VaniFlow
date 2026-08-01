@@ -15,6 +15,7 @@ from vaaniflow.models import (
 from vaaniflow.pipeline import VaaniFlowPipeline
 from vaaniflow.config import settings
 from vaaniflow.repository.job_repository import DubbingJobRepository
+from api.middleware.upload_validation import validate_upload
 
 router = APIRouter()
 log = structlog.get_logger(__name__)
@@ -30,31 +31,39 @@ async def create_dubbing_job(
     source_language: SupportedLanguage = Form(default=SupportedLanguage.ENGLISH),
     tts_provider: TTSProvider = Form(default=TTSProvider.SARVAM),
     voice_id: str | None = Form(default=None),
+    speaker_gender: str = Form(default="Male"),
+    translation_mode: str = Form(default="formal"),
+    loudness: float = Form(default=1.5, ge=0.5, le=3.0),
 ):
     """
     Create a new dubbing job.
     Accepts audio/video file + target language config.
     Returns job_id immediately; processing happens in background.
     """
+    # Validate uploaded file (size, format, content-type)
+    content = await validate_upload(file)
+
     # Build config from form data
     config = DubbingJobConfig(
         source_language=source_language,
         target_language=target_language,
         tts_provider=tts_provider,
         voice_id=voice_id,
+        speaker_gender=speaker_gender,
+        translation_mode=translation_mode,
+        loudness=loudness,
     )
     job = DubbingJob(config=config)
     await job_repo.save(job)
 
     # Save uploaded file
     suffix = Path(file.filename).suffix if file.filename else ".wav"
-    content = await file.read()
-    
+
     def write_temp_file(data: bytes, suf: str) -> Path:
         with tempfile.NamedTemporaryFile(delete=False, suffix=suf) as tmp:
             tmp.write(data)
             return Path(tmp.name)
-            
+
     tmp_path = await asyncio.to_thread(write_temp_file, content, suffix)
 
     log.info(
@@ -63,6 +72,8 @@ async def create_dubbing_job(
         target_lang=target_language,
         filename=file.filename,
         size_bytes=len(content),
+        speaker_gender=speaker_gender,
+        translation_mode=translation_mode,
     )
 
     background_tasks.add_task(run_pipeline_task, job, tmp_path)
@@ -88,6 +99,37 @@ async def get_job_status(job_id: str):
         output_url=f"/jobs/{job_id}/download" if job.status == JobStatus.COMPLETED else None,
         error=job.error_message,
     )
+
+
+@router.delete("/{job_id}")
+async def cancel_job(job_id: str):
+    """
+    Cancel a running or pending dubbing job.
+    Sets status to FAILED with cancellation message.
+    """
+    job = await job_repo.get(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
+
+    # Check if job is in a cancellable state
+    terminal_statuses = {JobStatus.COMPLETED, JobStatus.FAILED}
+    if job.status in terminal_statuses:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Job already finished with status: {job.status}",
+        )
+
+    job.status = JobStatus.FAILED
+    job.error_message = "Cancelled by user"
+    await job_repo.save(job)
+
+    log.info("job_cancelled", job_id=job_id, previous_status=job.status)
+
+    return {
+        "job_id": job_id,
+        "status": job.status,
+        "message": "Job cancelled successfully",
+    }
 
 
 @router.get("/{job_id}/download")

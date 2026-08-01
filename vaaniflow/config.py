@@ -59,6 +59,17 @@ class Settings(BaseSettings):
     code_switch_normalization_enabled: bool = Field(default=True, alias="CODE_SWITCH_NORMALIZATION_ENABLED")
     subtitle_generation_enabled: bool = Field(default=True, alias="SUBTITLE_GENERATION_ENABLED")
 
+    # API Security
+    api_key: str = Field(default="", alias="VAANIFLOW_API_KEY")
+    cors_origins: str = Field(default="*", alias="CORS_ORIGINS")
+
+    # Upload limits
+    max_upload_size_mb: int = Field(default=100, alias="MAX_UPLOAD_SIZE_MB")
+    allowed_upload_formats: str = Field(
+        default=".mp3,.mp4,.wav,.webm,.ogg,.m4a,.flac,.mkv",
+        alias="ALLOWED_UPLOAD_FORMATS",
+    )
+
     model_config = {
         "env_file": ".env",
         "env_file_encoding": "utf-8",

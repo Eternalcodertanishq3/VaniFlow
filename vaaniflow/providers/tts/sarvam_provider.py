@@ -24,19 +24,19 @@ SARVAM_SUPPORTED_LANGUAGES = {
     "hi", "bn", "te", "mr", "ta", "gu", "kn", "ml", "pa", "or", "en",
 }
 
-# Default Sarvam voice per language
+# Default Sarvam voice per language — diversified across available voices
 SARVAM_DEFAULT_VOICES = {
-    "hi": "arvind",
-    "bn": "arvind",
-    "te": "arvind",
-    "mr": "arvind",
-    "ta": "arvind",
-    "gu": "arvind",
-    "kn": "arvind",
-    "ml": "arvind",
-    "pa": "arvind",
-    "or": "arvind",
-    "en": "arvind",
+    "hi": "arvind",   # Male Hindi
+    "bn": "arvind",   # Male Bengali
+    "te": "meera",    # Female Telugu
+    "mr": "arvind",   # Male Marathi
+    "ta": "meera",    # Female Tamil
+    "gu": "arvind",   # Male Gujarati
+    "kn": "meera",    # Female Kannada
+    "ml": "meera",    # Female Malayalam
+    "pa": "arvind",   # Male Punjabi
+    "or": "arvind",   # Male Odia
+    "en": "arvind",   # Male English
 }
 
 # Sarvam language code mapping
@@ -62,6 +62,7 @@ class SarvamTTSProvider(BaseTTSProvider):
 
     def __init__(self):
         self.api_key = settings.sarvam_api_key
+        self.default_loudness = 1.5
         self._session: aiohttp.ClientSession | None = None
 
     async def _get_session(self) -> aiohttp.ClientSession:
@@ -94,7 +95,7 @@ class SarvamTTSProvider(BaseTTSProvider):
             "speaker": voice,
             "pitch": request.pitch,
             "pace": request.speaking_rate,
-            "loudness": 1.5,
+            "loudness": self.default_loudness,
             "speech_sample_rate": 22050,
             "enable_preprocessing": True,
             "model": "bulbul:v1",
@@ -127,7 +128,7 @@ class SarvamTTSProvider(BaseTTSProvider):
 
                 return TTSSynthesisResponse(
                     audio_bytes=audio_bytes,
-                    duration_ms=len(audio_bytes) / 44.1,  # rough estimate at 22050Hz 16-bit
+                    duration_ms=len(audio_bytes) / 44100 * 1000,  # 22050Hz × 2 bytes = 44100 bytes/sec
                     provider=self.provider_name,
                 )
 

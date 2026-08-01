@@ -13,6 +13,7 @@ from api.routes import jobs, health
 from api.routes import metrics
 from api.routes import stats
 from api.middleware.logging_middleware import LoggingMiddleware
+from api.middleware.auth_middleware import APIKeyAuthMiddleware
 
 log = structlog.get_logger(__name__)
 
@@ -35,10 +36,11 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[o.strip() for o in settings.cors_origins.split(",")],
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(APIKeyAuthMiddleware)
 app.add_middleware(LoggingMiddleware)
 
 app.include_router(health.router, prefix="/health", tags=["health"])

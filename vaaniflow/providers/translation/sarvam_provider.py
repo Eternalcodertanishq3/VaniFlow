@@ -73,6 +73,7 @@ class SarvamTranslationProvider(BaseTranslationProvider):
         text: str,
         source_language: SupportedLanguage | str,
         target_language: SupportedLanguage | str,
+        **kwargs,
     ) -> str:
         """Translate text using Sarvam AI API."""
         source = source_language.value if isinstance(source_language, SupportedLanguage) else source_language
@@ -85,8 +86,8 @@ class SarvamTranslationProvider(BaseTranslationProvider):
             "input": text,
             "source_language_code": source_sarvam,
             "target_language_code": target_sarvam,
-            "speaker_gender": "Male",
-            "mode": "formal",
+            "speaker_gender": kwargs.get("speaker_gender", "Male"),
+            "mode": kwargs.get("translation_mode", "formal"),
             "model": "mayura:v1",
             "enable_preprocessing": True,
         }
@@ -132,13 +133,14 @@ class SarvamTranslationProvider(BaseTranslationProvider):
         texts: list[str],
         source_language: SupportedLanguage | str,
         target_language: SupportedLanguage | str,
+        **kwargs,
     ) -> list[str]:
         """
         Sarvam API is single-text only.
         Translate each text concurrently using asyncio.gather.
         """
         tasks = [
-            self.translate(text, source_language, target_language)
+            self.translate(text, source_language, target_language, **kwargs)
             for text in texts
         ]
         return await asyncio.gather(*tasks)
