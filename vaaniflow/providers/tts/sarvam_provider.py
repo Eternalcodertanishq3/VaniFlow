@@ -94,7 +94,7 @@ class SarvamTTSProvider(BaseTTSProvider):
             "speaker": voice,
             "pitch": request.pitch,
             "pace": request.speaking_rate,
-            "loudness": getattr(request, "loudness", 1.5),
+            "loudness": request.loudness,
             "speech_sample_rate": 22050,
             "enable_preprocessing": True,
             "model": "bulbul:v1",

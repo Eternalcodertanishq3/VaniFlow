@@ -388,7 +388,7 @@ pytest --cov=vaaniflow --cov=api -v
 | Code-Switch Normalizer | 17 | Hinglish/Tanglish detection, marking, phrase mapping |
 | Cost Tracker | 10 | Cache hit rates, USD savings, provider breakdown |
 | Lip-Sync Exporter | 6 | Manifest creation, JSON structure, emotion metadata |
-| Phase 1 (providers, cache, retry, pipeline, models) | 44 | Full provider + duration math + infrastructure coverage |
+| Phase 1 (providers, cache, retry, pipeline, models) | 47 | Full provider + duration math + infrastructure coverage |
 
 ---
 
@@ -423,7 +423,7 @@ VaaniFlow/
 │   ├── main.py                        # App + lifespan + middleware pipeline
 │   ├── routes/                        # Jobs, health, metrics, stats endpoints (with DELETE /jobs/{id})
 │   └── middleware/                    # Logging, Auth & Upload Validation middleware
-├── tests/                             # 149 unit + integration tests
+├── tests/                             # 151 unit + integration tests
 ├── docker/                            # Dockerfile + compose
 ├── pyproject.toml
 └── README.md
