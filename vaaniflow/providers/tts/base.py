@@ -18,6 +18,7 @@ class TTSSynthesisRequest:
     voice_id: str | None = None
     speaking_rate: float = 1.0
     pitch: float = 0.0
+    loudness: float = 1.5
 
 
 @dataclass

@@ -9,7 +9,7 @@
 > Transcribe → Translate → Synthesize → Stitch — fully async, with emotion preservation, quality control, and production observability.
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![Tests](https://img.shields.io/badge/tests-149%20passed-brightgreen.svg)](#-running-tests)
+[![Tests](https://img.shields.io/badge/tests-151%20passed-brightgreen.svg)](#-running-tests)
 [![Version](https://img.shields.io/badge/version-2.0.0-orange.svg)](pyproject.toml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -359,7 +359,7 @@ JSON-structured logging with `contextvars` means every log event in a pipeline r
 ## 🧪 Running Tests
 
 ```bash
-# All tests (149 tests)
+# All tests (151 tests)
 pytest -v
 
 # Unit tests only

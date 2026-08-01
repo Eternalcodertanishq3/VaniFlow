@@ -17,11 +17,7 @@ class TestUploadValidation:
         with patch("api.middleware.upload_validation.settings") as mock:
             mock.max_upload_size_mb = 100
             mock.allowed_upload_formats = ".mp3,.mp4,.wav,.webm,.ogg,.m4a,.flac,.mkv"
-            # Need to re-import module-level constants
-            with patch("api.middleware.upload_validation.ALLOWED_EXTENSIONS",
-                       {".mp3", ".mp4", ".wav", ".webm", ".ogg", ".m4a", ".flac", ".mkv"}):
-                with patch("api.middleware.upload_validation.MAX_UPLOAD_BYTES", 100 * 1024 * 1024):
-                    yield mock
+            yield mock
 
     def _make_upload(self, filename: str, content: bytes, content_type: str = "audio/wav") -> UploadFile:
         """Create a mock UploadFile."""

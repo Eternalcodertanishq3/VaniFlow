@@ -11,13 +11,6 @@ from vaaniflow.config import settings
 
 log = structlog.get_logger(__name__)
 
-# Allowed file extensions for upload
-ALLOWED_EXTENSIONS = set(
-    ext.strip().lower()
-    for ext in settings.allowed_upload_formats.split(",")
-    if ext.strip()
-)
-
 # Allowed content types for audio/video uploads
 ALLOWED_CONTENT_TYPES = {
     "audio/mpeg", "audio/mp3", "audio/wav", "audio/x-wav", "audio/wave",
@@ -28,7 +21,19 @@ ALLOWED_CONTENT_TYPES = {
     "application/octet-stream",  # Accept generic binary (common for programmatic uploads)
 }
 
-MAX_UPLOAD_BYTES = settings.max_upload_size_mb * 1024 * 1024
+
+def get_allowed_extensions() -> set[str]:
+    """Dynamically get allowed extensions from settings."""
+    return set(
+        ext.strip().lower()
+        for ext in settings.allowed_upload_formats.split(",")
+        if ext.strip()
+    )
+
+
+def get_max_upload_bytes() -> int:
+    """Dynamically get max upload bytes from settings."""
+    return settings.max_upload_size_mb * 1024 * 1024
 
 
 async def validate_upload(file: UploadFile) -> bytes:
@@ -53,10 +58,11 @@ async def validate_upload(file: UploadFile) -> bytes:
 
     # Check file extension
     ext = Path(file.filename).suffix.lower()
-    if ext not in ALLOWED_EXTENSIONS:
+    allowed_extensions = get_allowed_extensions()
+    if ext not in allowed_extensions:
         raise HTTPException(
             status_code=400,
-            detail=f"Unsupported file format '{ext}'. Allowed: {', '.join(sorted(ALLOWED_EXTENSIONS))}",
+            detail=f"Unsupported file format '{ext}'. Allowed: {', '.join(sorted(allowed_extensions))}",
         )
 
     # Check content type
@@ -74,7 +80,8 @@ async def validate_upload(file: UploadFile) -> bytes:
 
     # Read and check file size
     content = await file.read()
-    if len(content) > MAX_UPLOAD_BYTES:
+    max_upload_bytes = get_max_upload_bytes()
+    if len(content) > max_upload_bytes:
         raise HTTPException(
             status_code=413,
             detail=f"File too large ({len(content) / 1024 / 1024:.1f}MB). Maximum: {settings.max_upload_size_mb}MB",

@@ -51,9 +51,11 @@ app.include_router(stats.router, tags=["cost-optimization"])
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     if isinstance(exc, HTTPException):
-        # We don't want to turn 404s/400s into 500s. We raise it to let FastAPI handle it properly
-        # if it's already an HTTPException.
-        raise
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": exc.detail},
+            headers=getattr(exc, "headers", None),
+        )
 
     log.error("unhandled_exception", error=str(exc), path=request.url.path)
     return JSONResponse(

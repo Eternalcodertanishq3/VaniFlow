@@ -119,11 +119,12 @@ async def cancel_job(job_id: str):
             detail=f"Job already finished with status: {job.status}",
         )
 
+    previous_status = job.status
     job.status = JobStatus.FAILED
     job.error_message = "Cancelled by user"
     await job_repo.save(job)
 
-    log.info("job_cancelled", job_id=job_id, previous_status=job.status)
+    log.info("job_cancelled", job_id=job_id, previous_status=previous_status)
 
     return {
         "job_id": job_id,

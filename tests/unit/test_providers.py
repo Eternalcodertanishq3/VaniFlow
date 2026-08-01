@@ -58,6 +58,34 @@ class TestSarvamTTSProvider:
         provider = SarvamTTSProvider()
         assert provider.provider_name == "sarvam"
 
+    @pytest.mark.asyncio
+    async def test_loudness_passed_to_payload(self):
+        """Test custom loudness setting is used in API payload."""
+        import base64
+        provider = SarvamTTSProvider()
+        mock_resp = MagicMock()
+        mock_resp.status = 200
+        dummy_b64 = base64.b64encode(b"\x00" * 44100).decode()
+        mock_resp.json = AsyncMock(return_value={"audios": [dummy_b64]})
+        mock_resp.raise_for_status = MagicMock()
+
+        mock_cm = MagicMock()
+        mock_cm.__aenter__ = AsyncMock(return_value=mock_resp)
+        mock_cm.__aexit__ = AsyncMock(return_value=None)
+
+        mock_session = MagicMock()
+        mock_session.post.return_value = mock_cm
+        provider._get_session = AsyncMock(return_value=mock_session)
+
+        req = TTSSynthesisRequest(text="Hello", language="hi", loudness=2.2)
+        res = await provider.synthesize(req)
+
+        # Check payload contained loudness=2.2
+        args, kwargs = mock_session.post.call_args
+        assert kwargs["json"]["loudness"] == 2.2
+        # Check duration math: 44100 bytes @ 22050Hz 16-bit mono = 1000.0 ms
+        assert res.duration_ms == 1000.0
+
 
 class TestGoogleTranslationProvider:
     """Tests for the Google Translation provider."""
@@ -83,6 +111,32 @@ class TestSarvamTranslationProvider:
     def test_provider_name(self):
         provider = SarvamTranslationProvider()
         assert provider.provider_name == "sarvam"
+
+    @pytest.mark.asyncio
+    async def test_gender_and_mode_passed_to_payload(self):
+        """Test custom speaker_gender and translation_mode pass to payload."""
+        provider = SarvamTranslationProvider()
+        mock_resp = MagicMock()
+        mock_resp.status = 200
+        mock_resp.json = AsyncMock(return_value={"translated_text": "नमस्ते"})
+        mock_resp.raise_for_status = MagicMock()
+
+        mock_cm = MagicMock()
+        mock_cm.__aenter__ = AsyncMock(return_value=mock_resp)
+        mock_cm.__aexit__ = AsyncMock(return_value=None)
+
+        mock_session = MagicMock()
+        mock_session.post.return_value = mock_cm
+        provider._get_session = AsyncMock(return_value=mock_session)
+
+        result = await provider.translate(
+            "Hello", "en", "hi", speaker_gender="Female", translation_mode="informal"
+        )
+        assert result == "नमस्ते"
+
+        args, kwargs = mock_session.post.call_args
+        assert kwargs["json"]["speaker_gender"] == "Female"
+        assert kwargs["json"]["mode"] == "informal"
 
 
 class TestWhisperProvider:

@@ -378,10 +378,6 @@ class VaaniFlowPipeline:
         primary_provider = self.tts_providers[config.tts_provider]
         fallback_provider = self.tts_providers[TTSProvider.GTTS]
 
-        # Set loudness from job config on Sarvam TTS provider
-        if hasattr(primary_provider, 'default_loudness'):
-            primary_provider.default_loudness = config.loudness
-
         synthesized_segments = []
         total_bytes = 0
 
@@ -448,6 +444,7 @@ class VaaniFlowPipeline:
             voice_id=config.voice_id,
             speaking_rate=emotion.speaking_rate,   # emotion-aware
             pitch=emotion.pitch_shift,             # emotion-aware
+            loudness=config.loudness,              # job-level loudness setting
         )
 
         log.debug(

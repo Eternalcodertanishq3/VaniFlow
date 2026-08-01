@@ -62,7 +62,6 @@ class SarvamTTSProvider(BaseTTSProvider):
 
     def __init__(self):
         self.api_key = settings.sarvam_api_key
-        self.default_loudness = 1.5
         self._session: aiohttp.ClientSession | None = None
 
     async def _get_session(self) -> aiohttp.ClientSession:
@@ -95,7 +94,7 @@ class SarvamTTSProvider(BaseTTSProvider):
             "speaker": voice,
             "pitch": request.pitch,
             "pace": request.speaking_rate,
-            "loudness": self.default_loudness,
+            "loudness": getattr(request, "loudness", 1.5),
             "speech_sample_rate": 22050,
             "enable_preprocessing": True,
             "model": "bulbul:v1",
