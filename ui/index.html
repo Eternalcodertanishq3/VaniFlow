@@ -18,7 +18,7 @@
 
   .clay-card {
     width: 100%;
-    max-width: 480px;
+    max-width: 520px;
     background: #FAF9F5;
     border-radius: 28px;
     box-shadow:
@@ -41,55 +41,83 @@
     background: rgba(255,255,255,0.55); top: 5px; left: 6px;
   }
   .brand-name { font-size: 21px; font-weight: 600; letter-spacing: -0.02em; color: #1C1A14; }
-  .brand-sub { font-size: 13px; color: #8C8678; margin: 0 0 28px 40px; }
+  .brand-sub { font-size: 13px; color: #8C8678; margin: 0 0 24px 40px; }
 
   .dz {
     border-radius: 22px; background: #F2F0E9;
     box-shadow: inset 0 2px 5px rgba(20,18,12,0.07), inset 0 -1px 0 rgba(255,255,255,0.5);
-    padding: 34px 20px; text-align: center; cursor: pointer;
+    padding: 30px 20px; text-align: center; cursor: pointer;
     transition: box-shadow .25s, transform .15s;
-    position: relative; overflow: hidden; margin-bottom: 22px;
+    position: relative; overflow: hidden; margin-bottom: 20px;
   }
   .dz:hover, .dz.dragover {
     box-shadow: inset 0 2px 5px rgba(20,18,12,0.07), inset 0 -1px 0 rgba(255,255,255,0.5), 0 0 0 2px rgba(79,70,229,0.18);
   }
   .dz:active { transform: scale(0.99); }
   .dz-icon-wrap {
-    width: 52px; height: 52px; border-radius: 18px; background: #FAF9F5;
+    width: 48px; height: 48px; border-radius: 16px; background: #FAF9F5;
     box-shadow: 0 1px 1px rgba(20,18,12,0.05), 0 4px 10px rgba(20,18,12,0.08), inset 0 1px 0 rgba(255,255,255,0.7);
-    display: flex; align-items: center; justify-content: center; margin: 0 auto 14px;
-    animation: floaty 3.4s ease-in-out infinite; font-size: 22px; color: #4F46E5;
+    display: flex; align-items: center; justify-content: center; margin: 0 auto 12px;
+    animation: floaty 3.4s ease-in-out infinite; font-size: 20px; color: #4F46E5;
   }
   @keyframes floaty { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
-  .dz-text { font-size: 14.5px; color: #3A372E; font-weight: 500; }
+  .dz-text { font-size: 14px; color: #3A372E; font-weight: 500; }
   .dz-sub { font-size: 12px; color: #A7A192; margin-top: 4px; }
 
   .file-chip {
     display: none; align-items: center; gap: 10px;
     background: #F2F0E9; border-radius: 16px; padding: 12px 16px;
     box-shadow: inset 0 1px 3px rgba(20,18,12,0.06);
-    margin-bottom: 22px; font-size: 13px; color: #3A372E; font-weight: 500;
+    margin-bottom: 20px; font-size: 13px; color: #3A372E; font-weight: 500;
   }
   .file-chip.show { display: flex; }
   .file-chip i { color: #4F46E5; font-size: 18px; }
 
-  .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 22px; }
+  .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+  .field { margin-bottom: 0; }
   .field label {
-    display: block; font-size: 11.5px; font-weight: 600; color: #9A9384;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 11.5px; font-weight: 600; color: #9A9384;
     text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px;
   }
-  .claySelect {
-    width: 100%; padding: 13px 14px; border-radius: 16px; background: #F2F0E9;
+  .field label span.val { color: #4F46E5; font-weight: 700; text-transform: none; }
+  .claySelect, .clayInput {
+    width: 100%; padding: 12px 14px; border-radius: 16px; background: #F2F0E9;
     box-shadow: inset 0 2px 4px rgba(20,18,12,0.06), inset 0 -1px 0 rgba(255,255,255,0.5);
     border: none; font-size: 14px; color: #1C1A14; font-weight: 500; cursor: pointer;
     appearance: none; -webkit-appearance: none;
+  }
+  .claySelect {
     background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8'><path d='M1 1l5 5 5-5' stroke='%23938C7C' stroke-width='1.6' fill='none' stroke-linecap='round'/></svg>");
     background-repeat: no-repeat; background-position: right 14px center;
   }
-  .claySelect:focus {
+  .clayInput { cursor: text; }
+  .claySelect:focus, .clayInput:focus {
     outline: none;
     box-shadow: inset 0 2px 4px rgba(20,18,12,0.06), 0 0 0 2px rgba(79,70,229,0.3);
   }
+
+  .clayRange {
+    width: 100%; height: 8px; border-radius: 6px; background: #E5E2D9;
+    outline: none; appearance: none; -webkit-appearance: none;
+    box-shadow: inset 0 1px 3px rgba(20,18,12,0.12); margin-top: 6px; cursor: pointer;
+  }
+  .clayRange::-webkit-slider-thumb {
+    appearance: none; -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%;
+    background: linear-gradient(180deg, #6660F0, #4F46E5);
+    box-shadow: 0 2px 6px rgba(79,70,229,0.4), inset 0 1px 0 rgba(255,255,255,0.5);
+    cursor: pointer; transition: transform .12s;
+  }
+  .clayRange::-webkit-slider-thumb:hover { transform: scale(1.1); }
+
+  .adv-toggle {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 12.5px; font-weight: 600; color: #7A72F2; cursor: pointer;
+    margin-bottom: 16px; user-select: none; padding: 4px 0;
+  }
+  .adv-toggle:hover { color: #4F46E5; }
+  .adv-panel { display: none; margin-bottom: 16px; }
+  .adv-panel.show { display: block; animation: slideIn .25s ease; }
 
   .btn-primary {
     width: 100%; padding: 16px; border: none; border-radius: 18px;
@@ -106,14 +134,15 @@
   .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
   .status-card {
-    margin-top: 22px; background: #F2F0E9; border-radius: 20px; padding: 20px;
+    margin-top: 20px; background: #F2F0E9; border-radius: 20px; padding: 20px;
     box-shadow: inset 0 1px 3px rgba(20,18,12,0.05);
     display: none;
   }
   .status-card.show { display: block; animation: slideIn .35s ease; }
   @keyframes slideIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 
-  .stage-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .stage-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .stage-left { display: flex; align-items: center; gap: 10px; }
   .dot-pulse {
     width: 9px; height: 9px; border-radius: 50%; background: #4F46E5;
     animation: dotpulse 1.6s ease-out infinite;
@@ -124,6 +153,11 @@
     100% { box-shadow: 0 0 0 0 rgba(79,70,229,0); }
   }
   .stage-name { font-size: 14px; font-weight: 600; color: #1C1A14; }
+  .cancel-btn {
+    font-size: 12px; font-weight: 600; color: #D93838; background: none; border: none;
+    cursor: pointer; padding: 4px 8px; border-radius: 8px;
+  }
+  .cancel-btn:hover { background: #FBEAEA; }
   .ptrack {
     width: 100%; height: 10px; border-radius: 8px; background: #E5E2D9;
     box-shadow: inset 0 1px 3px rgba(20,18,12,0.1); overflow: hidden;
@@ -135,7 +169,7 @@
   .ppct { font-size: 12px; color: #9A9384; margin-top: 8px; text-align: right; font-weight: 500; }
 
   .result-card {
-    margin-top: 22px; background: #EAF6EE; border-radius: 20px; padding: 22px; text-align: center;
+    margin-top: 20px; background: #EAF6EE; border-radius: 20px; padding: 22px; text-align: center;
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 1px 2px rgba(20,18,12,0.04);
     display: none;
   }
@@ -157,7 +191,7 @@
   }
 
   .error-card {
-    margin-top: 22px; background: #FBEAEA; border-radius: 20px; padding: 20px;
+    margin-top: 20px; background: #FBEAEA; border-radius: 20px; padding: 20px;
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
     font-size: 13px; color: #8A2A2A; display: none;
   }
@@ -183,7 +217,7 @@
     <div class="dz" id="dropzone">
       <div class="dz-icon-wrap">&#127908;</div>
       <div class="dz-text">drop an audio or video file</div>
-      <div class="dz-sub">mp3, wav, mp4 supported</div>
+      <div class="dz-sub">mp3, wav, mp4, webm supported (max 100MB)</div>
       <input type="file" id="fileInput" accept="audio/*,video/*" hidden>
     </div>
 
@@ -218,13 +252,64 @@
       </div>
     </div>
 
+    <!-- Advanced Settings Toggle -->
+    <div class="adv-toggle" id="advToggle">
+      <span>⚡ Advanced Controls (Loudness, Gender, Voice, Auth)</span>
+      <span id="advArrow">▼</span>
+    </div>
+
+    <!-- Advanced Panel -->
+    <div class="adv-panel" id="advPanel">
+      <div class="field" style="margin-bottom: 14px;">
+        <label>Loudness Multiplier <span class="val" id="loudnessVal">1.5x</span></label>
+        <input type="range" class="clayRange" id="loudness" min="0.5" max="3.0" step="0.1" value="1.5">
+      </div>
+
+      <div class="field-grid">
+        <div class="field">
+          <label>speaker gender</label>
+          <select class="claySelect" id="speakerGender">
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>translation mode</label>
+          <select class="claySelect" id="translationMode">
+            <option value="formal">Formal</option>
+            <option value="informal">Informal</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field-grid">
+        <div class="field">
+          <label>voice ID (optional)</label>
+          <select class="claySelect" id="voiceId">
+            <option value="">Default (Auto)</option>
+            <option value="arvind">arvind (Male)</option>
+            <option value="meera">meera (Female)</option>
+            <option value="pooja">pooja (Female)</option>
+            <option value="amol">amol (Male)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>API Key (if required)</label>
+          <input type="password" class="clayInput" id="apiKey" placeholder="X-API-Key">
+        </div>
+      </div>
+    </div>
+
     <button type="submit" class="btn-primary" id="submitBtn">start dubbing</button>
   </form>
 
   <div class="status-card" id="statusArea">
     <div class="stage-row">
-      <div class="dot-pulse"></div>
-      <div class="stage-name" id="stageLabel">Queued</div>
+      <div class="stage-left">
+        <div class="dot-pulse"></div>
+        <div class="stage-name" id="stageLabel">Queued</div>
+      </div>
+      <button class="cancel-btn" id="cancelBtn" type="button">Cancel</button>
     </div>
     <div class="ptrack"><div class="pfill" id="progressFill"></div></div>
     <div class="ppct" id="progressPct">0%</div>
@@ -245,7 +330,11 @@
 </div>
 
 <script>
-const API_BASE = "http://localhost:8000";
+// Determine API Base URL dynamically
+const API_BASE = window.location.origin.includes("http") && !window.location.origin.includes("file://")
+  ? (window.location.port ? `${window.location.protocol}//${window.location.hostname}:8000` : "")
+  : "http://localhost:8000";
+
 const STAGE_LABELS = {
   pending: "Queued",
   transcribing: "Transcribing audio",
@@ -272,9 +361,28 @@ const downloadBtn = document.getElementById("downloadBtn");
 const errorArea = document.getElementById("errorArea");
 const errorMessage = document.getElementById("errorMessage");
 const retryBtn = document.getElementById("retryBtn");
+const cancelBtn = document.getElementById("cancelBtn");
+
+const advToggle = document.getElementById("advToggle");
+const advPanel = document.getElementById("advPanel");
+const advArrow = document.getElementById("advArrow");
+const loudnessSlider = document.getElementById("loudness");
+const loudnessVal = document.getElementById("loudnessVal");
 
 let selectedFile = null;
 let pollTimer = null;
+let currentJobId = null;
+
+// Toggle Advanced Settings Panel
+advToggle.addEventListener("click", () => {
+  const isShow = advPanel.classList.toggle("show");
+  advArrow.textContent = isShow ? "▲" : "▼";
+});
+
+// Update Loudness display
+loudnessSlider.addEventListener("input", (e) => {
+  loudnessVal.textContent = `${parseFloat(e.target.value).toFixed(1)}x`;
+});
 
 dropzone.addEventListener("click", () => fileInput.click());
 dropzone.addEventListener("dragover", (e) => { e.preventDefault(); dropzone.classList.add("dragover"); });
@@ -303,9 +411,19 @@ function resetUI() {
   submitBtn.disabled = false;
   submitBtn.textContent = "start dubbing";
   if (pollTimer) clearInterval(pollTimer);
+  currentJobId = null;
 }
 
 retryBtn.addEventListener("click", resetUI);
+
+function getAuthHeaders() {
+  const headers = {};
+  const apiKey = document.getElementById("apiKey").value.trim();
+  if (apiKey) {
+    headers["X-API-Key"] = apiKey;
+  }
+  return headers;
+}
 
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -323,11 +441,29 @@ form.addEventListener("submit", async (e) => {
   formData.append("target_language", document.getElementById("targetLang").value);
   formData.append("source_language", "en");
   formData.append("tts_provider", document.getElementById("ttsProvider").value);
+  formData.append("speaker_gender", document.getElementById("speakerGender").value);
+  formData.append("translation_mode", document.getElementById("translationMode").value);
+  formData.append("loudness", loudnessSlider.value);
+  
+  const voice = document.getElementById("voiceId").value;
+  if (voice) {
+    formData.append("voice_id", voice);
+  }
 
   try {
-    const res = await fetch(`${API_BASE}/jobs/`, { method: "POST", body: formData });
-    if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
+    const res = await fetch(`${API_BASE}/jobs/`, {
+      method: "POST",
+      headers: getAuthHeaders(),
+      body: formData,
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({ detail: `HTTP ${res.status}` }));
+      throw new Error(errData.detail || `Upload failed: ${res.status}`);
+    }
+
     const data = await res.json();
+    currentJobId = data.job_id;
     statusArea.classList.add("show");
     pollJob(data.job_id);
   } catch (err) {
@@ -335,10 +471,32 @@ form.addEventListener("submit", async (e) => {
   }
 });
 
+cancelBtn.addEventListener("click", async () => {
+  if (!currentJobId) return;
+  try {
+    cancelBtn.disabled = true;
+    cancelBtn.textContent = "cancelling...";
+    await fetch(`${API_BASE}/jobs/${currentJobId}`, {
+      method: "DELETE",
+      headers: getAuthHeaders(),
+    });
+  } catch (e) {
+    console.error("Failed to send cancel request", e);
+  } finally {
+    cancelBtn.disabled = false;
+    cancelBtn.textContent = "Cancel";
+  }
+});
+
 function pollJob(jobId) {
   pollTimer = setInterval(async () => {
     try {
-      const res = await fetch(`${API_BASE}/jobs/${jobId}`);
+      const res = await fetch(`${API_BASE}/jobs/${jobId}`, {
+        headers: getAuthHeaders(),
+      });
+      if (!res.ok) {
+        throw new Error(`Failed to fetch job status (${res.status})`);
+      }
       const data = await res.json();
 
       stageLabel.textContent = STAGE_LABELS[data.status] || data.status;
@@ -356,11 +514,11 @@ function pollJob(jobId) {
         submitBtn.textContent = "start dubbing";
       } else if (data.status === "failed") {
         clearInterval(pollTimer);
-        showError(data.error || "Pipeline failed for an unknown reason");
+        showError(data.error || "Pipeline failed or was cancelled");
       }
     } catch (err) {
       clearInterval(pollTimer);
-      showError("Lost connection to the server");
+      showError("Lost connection to the server or authentication error");
     }
   }, 1500);
 }
