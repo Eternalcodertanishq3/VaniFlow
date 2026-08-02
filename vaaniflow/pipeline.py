@@ -298,11 +298,23 @@ class VaaniFlowPipeline:
         # Phase 2: Batch translate ALL cache misses in ONE API call
         if texts_to_translate:
             indices, texts, keys = zip(*texts_to_translate)
-            translated = await provider.translate_batch(
-                list(texts), config.source_language, config.target_language,
-                speaker_gender=config.speaker_gender,
-                translation_mode=config.translation_mode,
-            )
+            try:
+                translated = await provider.translate_batch(
+                    list(texts), config.source_language, config.target_language,
+                    speaker_gender=config.speaker_gender,
+                    translation_mode=config.translation_mode,
+                )
+            except Exception as e:
+                log.warning(
+                    "translation_provider_failed_using_fallback",
+                    primary=provider.provider_name,
+                    error=str(e),
+                )
+                fallback_trans = self.translation_providers[TranslationProvider.GOOGLE]
+                translated = await fallback_trans.translate_batch(
+                    list(texts), config.source_language, config.target_language,
+                )
+
             cost_tracker.record_translation_call(
                 str(config.translation_provider.value), len(texts)
             )

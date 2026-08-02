@@ -47,6 +47,32 @@ class GoogleTranslationProvider(BaseTranslationProvider):
     @no_retry_on_auth_error
     @retry_on_rate_limit(max_attempts=3)
     @retry_on_server_error(max_attempts=2)
+    async def _free_web_translate(self, text: str, source: str, target: str) -> str:
+        """Fallback to free web endpoint when Google API key is missing/invalid."""
+        import urllib.parse
+        import html
+        import re
+
+        url = f"https://translate.google.com/m?sl={source}&tl={target}&q={urllib.parse.quote(text)}"
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+        session = await self._get_session()
+        try:
+            async with session.get(url, headers=headers) as resp:
+                resp.raise_for_status()
+                raw_html = await resp.text()
+                match = re.search(r'class="result-container">(.*?)</div>', raw_html)
+                if match:
+                    translated = html.unescape(match.group(1)).strip()
+                    if translated:
+                        return translated
+                raise TranslationError("Failed to parse free web translation")
+        except Exception as e:
+            log.warning("free_google_translate_failed", error=str(e))
+            raise TranslationError(f"Free Google translate failed: {e}")
+
+    @no_retry_on_auth_error
+    @retry_on_rate_limit(max_attempts=3)
+    @retry_on_server_error(max_attempts=2)
     async def translate(
         self,
         text: str,
@@ -56,6 +82,9 @@ class GoogleTranslationProvider(BaseTranslationProvider):
         """Translate text using Google Translate API."""
         source = source_language.value if isinstance(source_language, SupportedLanguage) else source_language
         target = target_language.value if isinstance(target_language, SupportedLanguage) else target_language
+
+        if not self.api_key:
+            return await self._free_web_translate(text, source, target)
 
         params = {
             "key": self.api_key,
@@ -71,9 +100,8 @@ class GoogleTranslationProvider(BaseTranslationProvider):
                 if resp.status == 429:
                     raise RateLimitError(self.provider_name, "Rate limited")
                 if resp.status in (401, 403):
-                    raise AuthenticationError(
-                        self.provider_name, f"Invalid API key. Status: {resp.status}"
-                    )
+                    log.warning("google_api_key_invalid_using_free_fallback", status=resp.status)
+                    return await self._free_web_translate(text, source, target)
                 if resp.status >= 500:
                     raise ProviderServerError(
                         self.provider_name, f"Server error: {resp.status}"
@@ -117,6 +145,9 @@ class GoogleTranslationProvider(BaseTranslationProvider):
         source = source_language.value if isinstance(source_language, SupportedLanguage) else source_language
         target = target_language.value if isinstance(target_language, SupportedLanguage) else target_language
 
+        if not self.api_key:
+            return list(await asyncio.gather(*[self._free_web_translate(t, source, target) for t in texts]))
+
         # Build params with multiple 'q' values
         params = {
             "key": self.api_key,
@@ -133,9 +164,8 @@ class GoogleTranslationProvider(BaseTranslationProvider):
                 if resp.status == 429:
                     raise RateLimitError(self.provider_name, "Rate limited")
                 if resp.status in (401, 403):
-                    raise AuthenticationError(
-                        self.provider_name, f"Invalid API key. Status: {resp.status}"
-                    )
+                    log.warning("google_api_key_invalid_using_free_fallback", status=resp.status)
+                    return list(await asyncio.gather(*[self._free_web_translate(t, source, target) for t in texts]))
                 if resp.status >= 500:
                     raise ProviderServerError(
                         self.provider_name, f"Server error: {resp.status}"

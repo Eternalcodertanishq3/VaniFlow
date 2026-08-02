@@ -10,7 +10,7 @@ from pathlib import Path
 
 from vaaniflow.models import (
     DubbingJob, DubbingJobConfig, DubbingJobRequest,
-    DubbingJobResponse, JobStatus, SupportedLanguage, TTSProvider,
+    DubbingJobResponse, JobStatus, SupportedLanguage, TTSProvider, TranslationProvider,
 )
 from vaaniflow.pipeline import VaaniFlowPipeline
 from vaaniflow.config import settings
@@ -30,6 +30,7 @@ async def create_dubbing_job(
     target_language: SupportedLanguage = Form(...),
     source_language: SupportedLanguage = Form(default=SupportedLanguage.ENGLISH),
     tts_provider: TTSProvider = Form(default=TTSProvider.SARVAM),
+    translation_provider: TranslationProvider | None = Form(default=None),
     voice_id: str | None = Form(default=None),
     speaker_gender: str = Form(default="Male"),
     translation_mode: str = Form(default="formal"),
@@ -43,11 +44,20 @@ async def create_dubbing_job(
     # Validate uploaded file (size, format, content-type)
     content = await validate_upload(file)
 
+    chosen_translation_provider = translation_provider
+    if chosen_translation_provider is None:
+        chosen_translation_provider = (
+            TranslationProvider.SARVAM
+            if tts_provider == TTSProvider.SARVAM
+            else TranslationProvider.GOOGLE
+        )
+
     # Build config from form data
     config = DubbingJobConfig(
         source_language=source_language,
         target_language=target_language,
         tts_provider=tts_provider,
+        translation_provider=chosen_translation_provider,
         voice_id=voice_id,
         speaker_gender=speaker_gender,
         translation_mode=translation_mode,
