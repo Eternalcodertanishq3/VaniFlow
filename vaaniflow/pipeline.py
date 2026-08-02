@@ -280,9 +280,16 @@ class VaaniFlowPipeline:
         texts_to_translate = []
         cached_results = {}
 
+        # Effective source language (use detected language if config is 'auto')
+        effective_source = (
+            transcription.source_language
+            if (config.source_language == SupportedLanguage.AUTO or config.source_language == "auto") and transcription.source_language
+            else config.source_language
+        )
+
         # Phase 1: Check cache for all segments
         for segment in transcription.segments:
-            cache_key = f"{config.source_language}:{config.target_language}:{segment.original_text}"
+            cache_key = f"{effective_source}:{config.target_language}:{segment.original_text}"
             cached = await self.cache.get(cache_key)
 
             if cached:
@@ -300,7 +307,7 @@ class VaaniFlowPipeline:
             indices, texts, keys = zip(*texts_to_translate)
             try:
                 translated = await provider.translate_batch(
-                    list(texts), config.source_language, config.target_language,
+                    list(texts), effective_source, config.target_language,
                     speaker_gender=config.speaker_gender,
                     translation_mode=config.translation_mode,
                 )
@@ -312,7 +319,7 @@ class VaaniFlowPipeline:
                 )
                 fallback_trans = self.translation_providers[TranslationProvider.GOOGLE]
                 translated = await fallback_trans.translate_batch(
-                    list(texts), config.source_language, config.target_language,
+                    list(texts), effective_source, config.target_language,
                 )
 
             cost_tracker.record_translation_call(

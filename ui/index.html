@@ -273,6 +273,17 @@
 
     <div class="field-grid">
       <div class="field">
+        <label>source language</label>
+        <div class="custom-dropdown" id="dropdownSourceLang">
+          <div class="dropdown-trigger">
+            <span class="trigger-label">Auto-Detect</span>
+            <span class="arrow">▼</span>
+          </div>
+          <div class="dropdown-menu"></div>
+          <input type="hidden" id="sourceLang" value="auto">
+        </div>
+      </div>
+      <div class="field">
         <label>target language</label>
         <div class="custom-dropdown" id="dropdownTargetLang">
           <div class="dropdown-trigger">
@@ -283,16 +294,17 @@
           <input type="hidden" id="targetLang" value="hi">
         </div>
       </div>
-      <div class="field">
-        <label>tts provider</label>
-        <div class="custom-dropdown" id="dropdownTtsProvider">
-          <div class="dropdown-trigger">
-            <span class="trigger-label">Sarvam AI</span>
-            <span class="arrow">▼</span>
-          </div>
-          <div class="dropdown-menu"></div>
-          <input type="hidden" id="ttsProvider" value="sarvam">
+    </div>
+
+    <div class="field" style="margin-bottom: 16px;">
+      <label>tts provider</label>
+      <div class="custom-dropdown" id="dropdownTtsProvider">
+        <div class="dropdown-trigger">
+          <span class="trigger-label">Sarvam AI</span>
+          <span class="arrow">▼</span>
         </div>
+        <div class="dropdown-menu"></div>
+        <input type="hidden" id="ttsProvider" value="sarvam">
       </div>
     </div>
 
@@ -436,7 +448,6 @@ function initCustomDropdown(containerId, options, onChange) {
 
   trigger.addEventListener('click', (e) => {
     e.stopPropagation();
-    // Close other dropdowns
     document.querySelectorAll('.custom-dropdown').forEach(d => {
       if (d !== container) d.classList.remove('open');
     });
@@ -446,23 +457,38 @@ function initCustomDropdown(containerId, options, onChange) {
   return { renderOptions, setValue: (val, label) => { hiddenInput.value = val; triggerLabel.textContent = label; } };
 }
 
-// Close dropdowns on outside click
 document.addEventListener('click', () => {
   document.querySelectorAll('.custom-dropdown').forEach(d => d.classList.remove('open'));
 });
 
 // Dropdown Definitions
-const targetLangOpts = [
+const sourceLangOpts = [
+  { value: "auto", label: "Auto-Detect Language", badge: "Smart" },
+  { value: "en", label: "English" },
+  { value: "gu", label: "Gujarati" },
   { value: "hi", label: "Hindi" },
   { value: "bn", label: "Bengali" },
   { value: "te", label: "Telugu" },
   { value: "mr", label: "Marathi" },
   { value: "ta", label: "Tamil" },
-  { value: "gu", label: "Gujarati" },
   { value: "kn", label: "Kannada" },
   { value: "ml", label: "Malayalam" },
   { value: "pa", label: "Punjabi" },
   { value: "or", label: "Odia" }
+];
+
+const targetLangOpts = [
+  { value: "hi", label: "Hindi" },
+  { value: "gu", label: "Gujarati" },
+  { value: "bn", label: "Bengali" },
+  { value: "te", label: "Telugu" },
+  { value: "mr", label: "Marathi" },
+  { value: "ta", label: "Tamil" },
+  { value: "kn", label: "Kannada" },
+  { value: "ml", label: "Malayalam" },
+  { value: "pa", label: "Punjabi" },
+  { value: "or", label: "Odia" },
+  { value: "en", label: "English" }
 ];
 
 const ttsProviderOpts = [
@@ -482,6 +508,7 @@ const modeOpts = [
 ];
 
 // Initialize Dropdowns
+initCustomDropdown("dropdownSourceLang", sourceLangOpts);
 initCustomDropdown("dropdownTargetLang", targetLangOpts);
 initCustomDropdown("dropdownTranslationMode", modeOpts);
 
@@ -507,7 +534,6 @@ async function loadVoices(provider, gender) {
     }
   } catch (e) {
     console.warn("Could not fetch voices dynamically:", e);
-    // Fallback static list
     const fallbackOpts = [
       { value: "", label: "Auto (Default)" },
       { value: "arvind", label: "Arvind (Male)" },
@@ -629,8 +655,8 @@ form.addEventListener("submit", async (e) => {
 
   const formData = new FormData();
   formData.append("file", selectedFile);
+  formData.append("source_language", document.getElementById("sourceLang").value);
   formData.append("target_language", document.getElementById("targetLang").value);
-  formData.append("source_language", "en");
   formData.append("tts_provider", document.getElementById("ttsProvider").value);
   formData.append("speaker_gender", document.getElementById("speakerGender").value);
   formData.append("translation_mode", document.getElementById("translationMode").value);

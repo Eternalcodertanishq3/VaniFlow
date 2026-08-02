@@ -11,6 +11,7 @@ import uuid
 
 class SupportedLanguage(str, Enum):
     """10+ Indian languages supported by VaaniFlow."""
+    AUTO = "auto"
     HINDI = "hi"
     BENGALI = "bn"
     TELUGU = "te"
@@ -55,7 +56,7 @@ class DubbingJobConfig(BaseModel):
     Configuration for a single dubbing job.
     Pydantic v2 with full validation.
     """
-    source_language: SupportedLanguage = SupportedLanguage.ENGLISH
+    source_language: SupportedLanguage = SupportedLanguage.AUTO
     target_language: SupportedLanguage
     tts_provider: TTSProvider = TTSProvider.SARVAM
     translation_provider: TranslationProvider = TranslationProvider.SARVAM
@@ -71,7 +72,11 @@ class DubbingJobConfig(BaseModel):
     @field_validator("target_language")
     @classmethod
     def source_and_target_must_differ(cls, v, info):
-        if "source_language" in info.data and v == info.data["source_language"]:
+        if (
+            "source_language" in info.data
+            and info.data["source_language"] != SupportedLanguage.AUTO
+            and v == info.data["source_language"]
+        ):
             raise ValueError("Source and target language must be different")
         return v
 

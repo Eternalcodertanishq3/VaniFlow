@@ -28,7 +28,7 @@ async def create_dubbing_job(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     target_language: SupportedLanguage = Form(...),
-    source_language: SupportedLanguage = Form(default=SupportedLanguage.ENGLISH),
+    source_language: SupportedLanguage = Form(default=SupportedLanguage.AUTO),
     tts_provider: TTSProvider = Form(default=TTSProvider.SARVAM),
     translation_provider: TranslationProvider | None = Form(default=None),
     voice_id: str | None = Form(default=None),
