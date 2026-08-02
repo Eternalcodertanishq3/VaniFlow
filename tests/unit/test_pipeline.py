@@ -130,7 +130,7 @@ def test_dubbing_job_config_validation():
 def test_dubbing_job_config_defaults():
     """Test default config values."""
     config = DubbingJobConfig(target_language=SupportedLanguage.HINDI)
-    assert config.source_language == SupportedLanguage.ENGLISH
+    assert config.source_language == SupportedLanguage.AUTO
     assert config.tts_provider == TTSProvider.SARVAM
     assert config.max_retries == 3
     assert config.timeout_seconds == 30

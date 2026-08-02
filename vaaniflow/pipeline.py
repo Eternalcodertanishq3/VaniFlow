@@ -20,7 +20,7 @@ from pathlib import Path
 from structlog.contextvars import bind_contextvars, clear_contextvars
 
 from vaaniflow.models import (
-    DubbingJob, DubbingJobConfig, JobStatus,
+    DubbingJob, DubbingJobConfig, JobStatus, SupportedLanguage,
     TranscriptionResult, TranslationResult, TTSResult,
     AudioSegment, TTSProvider, TranslationProvider,
 )
