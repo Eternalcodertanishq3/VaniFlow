@@ -32,8 +32,8 @@ class AudioStitcher:
     loading the entire uncompressed stream into Python's memory.
     """
 
-    def __init__(self):
-        self.output_dir = Path(settings.output_dir)
+    def __init__(self, output_dir: Path | None = None):
+        self.output_dir = Path(output_dir) if output_dir else Path(settings.output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
     async def stitch(
