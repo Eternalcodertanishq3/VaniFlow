@@ -2,12 +2,14 @@
 SubtitleGenerator — generate SRT/VTT subtitle files from dubbed segments,
 and optionally burn them into the output video via ffmpeg.
 """
+
 import asyncio
 from pathlib import Path
+
 import structlog
 
-from vaaniflow.models import AudioSegment
 from vaaniflow.exceptions import AudioProcessingError
+from vaaniflow.models import AudioSegment
 
 log = structlog.get_logger(__name__)
 
@@ -37,7 +39,9 @@ class SubtitleGenerator:
         self.enabled = enabled
         self.output_dir = Path(output_dir)
 
-    def generate_srt(self, segments: list[AudioSegment], job_id: str, use_translated: bool = True) -> Path | None:
+    def generate_srt(
+        self, segments: list[AudioSegment], job_id: str, use_translated: bool = True
+    ) -> Path | None:
         if not self.enabled:
             return None
         self.output_dir.mkdir(parents=True, exist_ok=True)
@@ -47,7 +51,9 @@ class SubtitleGenerator:
         for i, seg in enumerate(segments, start=1):
             text = (seg.translated_text if use_translated else seg.original_text) or ""
             lines.append(f"{i}")
-            lines.append(f"{_format_srt_timestamp(seg.start_ms)} --> {_format_srt_timestamp(seg.end_ms)}")
+            lines.append(
+                f"{_format_srt_timestamp(seg.start_ms)} --> {_format_srt_timestamp(seg.end_ms)}"
+            )
             lines.append(text)
             lines.append("")
 
@@ -55,7 +61,9 @@ class SubtitleGenerator:
         log.info("srt_generated", path=str(srt_path), segments=len(segments))
         return srt_path
 
-    def generate_vtt(self, segments: list[AudioSegment], job_id: str, use_translated: bool = True) -> Path | None:
+    def generate_vtt(
+        self, segments: list[AudioSegment], job_id: str, use_translated: bool = True
+    ) -> Path | None:
         if not self.enabled:
             return None
         self.output_dir.mkdir(parents=True, exist_ok=True)
@@ -64,7 +72,9 @@ class SubtitleGenerator:
         lines = ["WEBVTT", ""]
         for seg in segments:
             text = (seg.translated_text if use_translated else seg.original_text) or ""
-            lines.append(f"{_format_vtt_timestamp(seg.start_ms)} --> {_format_vtt_timestamp(seg.end_ms)}")
+            lines.append(
+                f"{_format_vtt_timestamp(seg.start_ms)} --> {_format_vtt_timestamp(seg.end_ms)}"
+            )
             lines.append(text)
             lines.append("")
 
@@ -86,8 +96,17 @@ class SubtitleGenerator:
             raise AudioProcessingError("ffmpeg not found in PATH")
 
         srt_escaped = str(srt_path).replace("\\", "/").replace(":", "\\:")
-        cmd = [ffmpeg_path, "-y", "-i", str(video_path), "-vf", f"subtitles='{srt_escaped}'",
-               "-c:a", "copy", str(output_path)]
+        cmd = [
+            ffmpeg_path,
+            "-y",
+            "-i",
+            str(video_path),
+            "-vf",
+            f"subtitles='{srt_escaped}'",
+            "-c:a",
+            "copy",
+            str(output_path),
+        ]
 
         def _run():
             res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=120)

@@ -2,10 +2,13 @@
 Redis-backed job repository.
 Replaces in-memory dict — jobs survive server restarts.
 """
+
 from typing import Optional
+
 import structlog
-from vaaniflow.models import DubbingJob
+
 from vaaniflow.config import settings
+from vaaniflow.models import DubbingJob
 
 log = structlog.get_logger(__name__)
 
@@ -28,6 +31,7 @@ class DubbingJobRepository:
         if self._redis is None and not self._using_fallback:
             try:
                 import redis.asyncio as aioredis
+
                 self._redis = aioredis.from_url(
                     settings.redis_url, decode_responses=True, socket_connect_timeout=1
                 )
@@ -68,10 +72,7 @@ class DubbingJobRepository:
                 if not keys:
                     return []
                 values = await redis.mget(*keys)
-                return [
-                    DubbingJob.model_validate_json(v)
-                    for v in values if v is not None
-                ]
+                return [DubbingJob.model_validate_json(v) for v in values if v is not None]
             except Exception as e:
                 log.warning("job_list_failed", error=str(e))
         return list(self._fallback.values())

@@ -2,13 +2,21 @@
 ElevenLabs TTS Provider implementation.
 Shows how to translate HTTP errors into our custom exception hierarchy.
 """
+
 import asyncio
+
 import aiohttp
 import structlog
-from vaaniflow.providers.tts.base import BaseTTSProvider, TTSSynthesisRequest, TTSSynthesisResponse
-from vaaniflow.exceptions import RateLimitError, AuthenticationError, ProviderServerError, ProviderTimeoutError
-from vaaniflow.utils.retry import retry_on_rate_limit, retry_on_server_error, no_retry_on_auth_error
+
 from vaaniflow.config import settings
+from vaaniflow.exceptions import (
+    AuthenticationError,
+    ProviderServerError,
+    ProviderTimeoutError,
+    RateLimitError,
+)
+from vaaniflow.providers.tts.base import BaseTTSProvider, TTSSynthesisRequest, TTSSynthesisResponse
+from vaaniflow.utils.retry import no_retry_on_auth_error, retry_on_rate_limit, retry_on_server_error
 
 log = structlog.get_logger(__name__)
 
@@ -60,18 +68,15 @@ class ElevenLabsProvider(BaseTTSProvider):
                 if resp.status == 429:
                     retry_after = resp.headers.get("Retry-After", "unknown")
                     raise RateLimitError(
-                        self.provider_name,
-                        f"Rate limited. Retry-After: {retry_after}"
+                        self.provider_name, f"Rate limited. Retry-After: {retry_after}"
                     )
                 if resp.status in (401, 403):
                     raise AuthenticationError(
-                        self.provider_name,
-                        f"Invalid API key. Status: {resp.status}"
+                        self.provider_name, f"Invalid API key. Status: {resp.status}"
                     )
                 if resp.status >= 500:
                     raise ProviderServerError(
-                        self.provider_name,
-                        f"Server error. Status: {resp.status}"
+                        self.provider_name, f"Server error. Status: {resp.status}"
                     )
 
                 resp.raise_for_status()
@@ -85,8 +90,7 @@ class ElevenLabsProvider(BaseTTSProvider):
 
         except asyncio.TimeoutError:
             raise ProviderTimeoutError(
-                self.provider_name,
-                f"Request timed out after {settings.provider_timeout_seconds}s"
+                self.provider_name, f"Request timed out after {settings.provider_timeout_seconds}s"
             )
 
     async def health_check(self) -> bool:

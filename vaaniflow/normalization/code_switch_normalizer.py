@@ -7,7 +7,9 @@ pronunciation.  Also normalizes common code-switched phrases to their canonical 
 
 Applied BEFORE sending text to TTS providers.
 """
+
 import re
+
 import structlog
 
 log = structlog.get_logger(__name__)
@@ -15,30 +17,32 @@ log = structlog.get_logger(__name__)
 # ---------------------------------------------------------------------------
 # Unicode ranges for Indic scripts
 # ---------------------------------------------------------------------------
-_DEVANAGARI_RANGE = r"\u0900-\u097F"   # Hindi, Marathi, Sanskrit
-_TAMIL_RANGE = r"\u0B80-\u0BFF"        # Tamil
-_TELUGU_RANGE = r"\u0C00-\u0C7F"       # Telugu
-_BENGALI_RANGE = r"\u0980-\u09FF"      # Bengali
-_GUJARATI_RANGE = r"\u0A80-\u0AFF"     # Gujarati
-_KANNADA_RANGE = r"\u0C80-\u0CFF"      # Kannada
-_MALAYALAM_RANGE = r"\u0D00-\u0D7F"    # Malayalam
-_GURMUKHI_RANGE = r"\u0A00-\u0A7F"     # Punjabi
+_DEVANAGARI_RANGE = r"\u0900-\u097F"  # Hindi, Marathi, Sanskrit
+_TAMIL_RANGE = r"\u0B80-\u0BFF"  # Tamil
+_TELUGU_RANGE = r"\u0C00-\u0C7F"  # Telugu
+_BENGALI_RANGE = r"\u0980-\u09FF"  # Bengali
+_GUJARATI_RANGE = r"\u0A80-\u0AFF"  # Gujarati
+_KANNADA_RANGE = r"\u0C80-\u0CFF"  # Kannada
+_MALAYALAM_RANGE = r"\u0D00-\u0D7F"  # Malayalam
+_GURMUKHI_RANGE = r"\u0A00-\u0A7F"  # Punjabi
 
 _ALL_INDIC_RANGES = (
-    _DEVANAGARI_RANGE + _TAMIL_RANGE + _TELUGU_RANGE + _BENGALI_RANGE
-    + _GUJARATI_RANGE + _KANNADA_RANGE + _MALAYALAM_RANGE + _GURMUKHI_RANGE
+    _DEVANAGARI_RANGE
+    + _TAMIL_RANGE
+    + _TELUGU_RANGE
+    + _BENGALI_RANGE
+    + _GUJARATI_RANGE
+    + _KANNADA_RANGE
+    + _MALAYALAM_RANGE
+    + _GURMUKHI_RANGE
 )
 
 # Regex: a token made entirely of Indic-script characters (+ common combining marks)
-_INDIC_TOKEN_RE = re.compile(
-    rf"[{_ALL_INDIC_RANGES}\u0900-\u0D7F]+", re.UNICODE
-)
+_INDIC_TOKEN_RE = re.compile(rf"[{_ALL_INDIC_RANGES}\u0900-\u0D7F]+", re.UNICODE)
 
 # Regex: a token made entirely of Basic-Latin letters (ASCII A-Za-z, optionally
 # with apostrophe/hyphen for contractions like "don't" or "e-mail")
-_LATIN_TOKEN_RE = re.compile(
-    r"[A-Za-z][A-Za-z'\-]*[A-Za-z]|[A-Za-z]", re.UNICODE
-)
+_LATIN_TOKEN_RE = re.compile(r"[A-Za-z][A-Za-z'\-]*[A-Za-z]|[A-Za-z]", re.UNICODE)
 
 # Regex: a purely numeric token (digits, commas, decimals)
 _NUMERIC_TOKEN_RE = re.compile(r"^[\d,\.]+$")
@@ -48,18 +52,18 @@ _NUMERIC_TOKEN_RE = re.compile(r"^[\d,\.]+$")
 # Keys are lowercase for case-insensitive matching.
 # ---------------------------------------------------------------------------
 COMMON_CODE_SWITCH_PHRASES: dict[str, str] = {
-    "bill print karo":          "bill print करो",
-    "please confirm kardo":     "please confirm कर दो",
-    "please confirm kar do":    "please confirm कर दो",
-    "meeting schedule karo":    "meeting schedule करो",
-    "email send karo":          "email send करो",
-    "file download karo":       "file download करो",
-    "password reset karo":      "password reset करो",
-    "order cancel karo":        "order cancel करो",
-    "payment process karo":     "payment process करो",
-    "update install karo":      "update install करो",
-    "report generate karo":     "report generate करो",
-    "data backup karo":         "data backup करो",
+    "bill print karo": "bill print करो",
+    "please confirm kardo": "please confirm कर दो",
+    "please confirm kar do": "please confirm कर दो",
+    "meeting schedule karo": "meeting schedule करो",
+    "email send karo": "email send करो",
+    "file download karo": "file download करो",
+    "password reset karo": "password reset करो",
+    "order cancel karo": "order cancel करो",
+    "payment process karo": "payment process करो",
+    "update install karo": "update install करो",
+    "report generate karo": "report generate करो",
+    "data backup karo": "data backup करो",
 }
 
 
@@ -88,11 +92,9 @@ class CodeSwitchNormalizer:
         sub-phrases — identical strategy to the pronunciation corrector.
         """
         patterns = []
-        for original, normalised in sorted(
-            self.phrase_map.items(), key=lambda x: -len(x[0])
-        ):
+        for original, normalised in sorted(self.phrase_map.items(), key=lambda x: -len(x[0])):
             pattern = re.compile(
-                r'\b' + re.escape(original) + r'\b',
+                r"\b" + re.escape(original) + r"\b",
                 re.IGNORECASE,
             )
             patterns.append((pattern, normalised, original))
@@ -117,9 +119,7 @@ class CodeSwitchNormalizer:
     # Public API
     # ------------------------------------------------------------------
 
-    def normalize(
-        self, text: str, target_language: str = "hi"
-    ) -> tuple[str, list[str]]:
+    def normalize(self, text: str, target_language: str = "hi") -> tuple[str, list[str]]:
         """Normalise code-switched text for TTS.
 
         Args:
@@ -161,9 +161,7 @@ class CodeSwitchNormalizer:
 
         return result, normalizations
 
-    def _mark_english_tokens(
-        self, text: str, normalizations: list[str]
-    ) -> str:
+    def _mark_english_tokens(self, text: str, normalizations: list[str]) -> str:
         """Walk through *text* and wrap un-marked Latin-script tokens
         with ``[EN:…]`` when Indic context is present."""
         parts: list[str] = []
@@ -177,7 +175,7 @@ class CodeSwitchNormalizer:
             parts.append(text[last_end:start])
 
             # Skip tokens that are already inside an [EN:…] marker
-            prefix = text[max(0, start - 4):start]
+            prefix = text[max(0, start - 4) : start]
             if prefix.endswith("[EN:"):
                 parts.append(token)
                 last_end = end

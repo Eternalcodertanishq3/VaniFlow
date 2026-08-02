@@ -2,7 +2,9 @@
 Async Redis cache for translation and TTS results.
 Reduces API costs by caching repeated translations.
 """
+
 from typing import Optional
+
 import structlog
 
 from vaaniflow.config import settings

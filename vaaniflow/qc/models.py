@@ -1,9 +1,11 @@
 """
 QC result models — every segment gets a quality score before stitching.
 """
+
 from enum import Enum
-from pydantic import BaseModel, Field
 from typing import Optional
+
+from pydantic import BaseModel, Field
 
 
 class QCStatus(str, Enum):

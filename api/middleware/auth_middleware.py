@@ -3,6 +3,7 @@ API key authentication middleware.
 If VAANIFLOW_API_KEY is set, all non-health endpoints require X-API-Key header.
 If not set (empty), auth is disabled for development convenience.
 """
+
 import structlog
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request

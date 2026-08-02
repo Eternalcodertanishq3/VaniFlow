@@ -3,8 +3,11 @@ Prometheus metrics definitions for VaaniFlow.
 Defined at library level to avoid circular imports (pipeline -> api).
 The API route simply serves the Prometheus registry.
 """
+
 from prometheus_client import (
-    Counter, Histogram, Gauge,
+    Counter,
+    Gauge,
+    Histogram,
 )
 
 # Job lifecycle

@@ -2,30 +2,40 @@
 AssemblyAI cloud transcription provider.
 Cloud fallback when local Whisper is unavailable or too slow.
 """
+
 import asyncio
+from pathlib import Path
+
 import aiohttp
 import structlog
 
-from pathlib import Path
-
-from vaaniflow.providers.transcription.base import BaseTranscriptionProvider
-from vaaniflow.models import TranscriptionResult, AudioSegment, TranscriptionProvider
+from vaaniflow.config import settings
 from vaaniflow.exceptions import (
-    RateLimitError,
     AuthenticationError,
     ProviderServerError,
     ProviderTimeoutError,
+    RateLimitError,
     TranscriptionError,
 )
-from vaaniflow.utils.retry import retry_on_rate_limit, retry_on_server_error, no_retry_on_auth_error
-from vaaniflow.config import settings
+from vaaniflow.models import AudioSegment, TranscriptionProvider, TranscriptionResult
+from vaaniflow.providers.transcription.base import BaseTranscriptionProvider
+from vaaniflow.utils.retry import no_retry_on_auth_error, retry_on_rate_limit, retry_on_server_error
 
 log = structlog.get_logger(__name__)
 
 ASSEMBLYAI_UPLOAD_URL = "https://api.assemblyai.com/v2/upload"
 ASSEMBLYAI_TRANSCRIPT_URL = "https://api.assemblyai.com/v2/transcript"
 ASSEMBLYAI_SUPPORTED_LANGUAGES = {
-    "en", "hi", "bn", "te", "ta", "mr", "gu", "kn", "ml", "pa",
+    "en",
+    "hi",
+    "bn",
+    "te",
+    "ta",
+    "mr",
+    "gu",
+    "kn",
+    "ml",
+    "pa",
 }
 
 
@@ -56,9 +66,7 @@ class AssemblyAIProvider(BaseTranscriptionProvider):
     @no_retry_on_auth_error
     @retry_on_rate_limit(max_attempts=3)
     @retry_on_server_error(max_attempts=2)
-    async def transcribe(
-        self, audio_path: Path, source_language: str
-    ) -> TranscriptionResult:
+    async def transcribe(self, audio_path: Path, source_language: str) -> TranscriptionResult:
         """Upload audio and get transcription from AssemblyAI."""
         session = await self._get_session()
 
@@ -89,9 +97,7 @@ class AssemblyAIProvider(BaseTranscriptionProvider):
         except Exception as e:
             raise TranscriptionError(f"AssemblyAI transcription failed: {e}")
 
-    async def _upload_file(
-        self, session: aiohttp.ClientSession, audio_path: Path
-    ) -> str:
+    async def _upload_file(self, session: aiohttp.ClientSession, audio_path: Path) -> str:
         """Upload audio file to AssemblyAI and return the upload URL."""
         with open(audio_path, "rb") as f:
             async with session.post(ASSEMBLYAI_UPLOAD_URL, data=f) as resp:
@@ -118,15 +124,11 @@ class AssemblyAIProvider(BaseTranscriptionProvider):
             if status == "completed":
                 return self._parse_result(data)
             elif status == "error":
-                raise TranscriptionError(
-                    f"AssemblyAI error: {data.get('error', 'Unknown')}"
-                )
+                raise TranscriptionError(f"AssemblyAI error: {data.get('error', 'Unknown')}")
 
             await asyncio.sleep(poll_interval)
 
-        raise ProviderTimeoutError(
-            self.provider_name, "Transcription polling timed out"
-        )
+        raise ProviderTimeoutError(self.provider_name, "Transcription polling timed out")
 
     def _parse_result(self, data: dict) -> TranscriptionResult:
         """Parse AssemblyAI response into our TranscriptionResult model."""

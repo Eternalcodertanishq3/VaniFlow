@@ -2,10 +2,12 @@
 Audio normalization utilities.
 Volume leveling and sample rate conversion.
 """
+
 import asyncio
 import shutil
 import subprocess
 from pathlib import Path
+
 import structlog
 
 from vaaniflow.exceptions import AudioProcessingError
@@ -53,16 +55,22 @@ class AudioNormalizer:
         try:
             cmd = [
                 ffmpeg_path,
-                "-i", str(input_path),
-                "-af", f"loudnorm=I={target_lufs}:TP=-1.5:LRA=11",
-                "-ar", "16000",
-                "-ac", "1",
+                "-i",
+                str(input_path),
+                "-af",
+                f"loudnorm=I={target_lufs}:TP=-1.5:LRA=11",
+                "-ar",
+                "16000",
+                "-ac",
+                "1",
                 "-y",
                 str(output_path),
             ]
 
             def _run():
-                res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60)
+                res = subprocess.run(
+                    cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60
+                )
                 if res.returncode != 0:
                     err = res.stderr.decode(errors="replace") if res.stderr else "Unknown error"
                     raise AudioProcessingError(f"Volume normalization failed: {err[:500]}")
@@ -110,15 +118,20 @@ class AudioNormalizer:
         try:
             cmd = [
                 ffmpeg_path,
-                "-i", str(input_path),
-                "-ar", str(target_rate),
-                "-ac", "1",
+                "-i",
+                str(input_path),
+                "-ar",
+                str(target_rate),
+                "-ac",
+                "1",
                 "-y",
                 str(output_path),
             ]
 
             def _run():
-                res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60)
+                res = subprocess.run(
+                    cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60
+                )
                 if res.returncode != 0:
                     raise AudioProcessingError("Sample rate conversion failed")
 

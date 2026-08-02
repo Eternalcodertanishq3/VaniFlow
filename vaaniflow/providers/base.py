@@ -2,6 +2,7 @@
 Base provider interface.
 All concrete providers (transcription, translation, TTS) inherit from this.
 """
+
 from abc import ABC, abstractmethod
 
 

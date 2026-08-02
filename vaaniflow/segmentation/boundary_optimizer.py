@@ -14,14 +14,17 @@ Solution:
   3. Merge adjacent segments that form complete sentences
   4. Preserve original timing (merged segment spans both time ranges)
 """
+
 import asyncio
+
 import structlog
+
 from vaaniflow.models import AudioSegment, TranscriptionResult
 
 log = structlog.get_logger(__name__)
 
-MAX_MERGE_GAP_MS = 800   # Only merge segments within 800ms of each other
-MAX_MERGED_WORDS = 50    # Don't create segments longer than 50 words
+MAX_MERGE_GAP_MS = 800  # Only merge segments within 800ms of each other
+MAX_MERGED_WORDS = 50  # Don't create segments longer than 50 words
 
 
 class SmartSegmentBoundaryOptimizer:
@@ -40,23 +43,24 @@ class SmartSegmentBoundaryOptimizer:
         if self._nlp is None:
             try:
                 import spacy
+
                 try:
                     self._nlp = spacy.load("en_core_web_sm")
                 except OSError:
                     import subprocess
+
                     subprocess.run(
-                        ["python", "-m", "spacy", "download", "en_core_web_sm"],
-                        capture_output=True
+                        ["python", "-m", "spacy", "download", "en_core_web_sm"], capture_output=True
                     )
                     self._nlp = spacy.load("en_core_web_sm")
             except ImportError:
-                log.warning("spacy_not_installed", message="pip install spacy for boundary optimization")
+                log.warning(
+                    "spacy_not_installed", message="pip install spacy for boundary optimization"
+                )
                 return None
         return self._nlp
 
-    async def optimize(
-        self, transcription: TranscriptionResult
-    ) -> TranscriptionResult:
+    async def optimize(self, transcription: TranscriptionResult) -> TranscriptionResult:
         """
         Optimize segment boundaries.
         Returns same TranscriptionResult with merged segments where appropriate.
@@ -98,9 +102,7 @@ class SmartSegmentBoundaryOptimizer:
 
         full_text = " ".join(seg.original_text.strip() for seg in segments)
         doc = nlp(full_text)
-        sentence_boundaries = {
-            sent.end_char for sent in doc.sents
-        }
+        sentence_boundaries = {sent.end_char for sent in doc.sents}
 
         merged = []
         buffer_segments = [segments[0]]
@@ -111,9 +113,9 @@ class SmartSegmentBoundaryOptimizer:
             gap_ms = seg.start_ms - prev.end_ms
 
             at_sentence_end = char_pos in sentence_boundaries
-            too_long = sum(
-                len(s.original_text.split()) for s in buffer_segments
-            ) >= MAX_MERGED_WORDS
+            too_long = (
+                sum(len(s.original_text.split()) for s in buffer_segments) >= MAX_MERGED_WORDS
+            )
             gap_too_large = gap_ms > MAX_MERGE_GAP_MS
 
             if at_sentence_end or too_long or gap_too_large:
@@ -129,9 +131,7 @@ class SmartSegmentBoundaryOptimizer:
 
         return merged
 
-    def _merge_segments(
-        self, segments: list[AudioSegment], new_index: int
-    ) -> AudioSegment:
+    def _merge_segments(self, segments: list[AudioSegment], new_index: int) -> AudioSegment:
         """Merge multiple segments into one, preserving timing."""
         merged_text = " ".join(s.original_text.strip() for s in segments)
         return AudioSegment(

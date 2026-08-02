@@ -1,20 +1,28 @@
 """
 Dubbing job API endpoints.
 """
+
 import asyncio
-from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks, Form
-from fastapi.responses import FileResponse
-import structlog
 import tempfile
 from pathlib import Path
 
+import structlog
+from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile
+from fastapi.responses import FileResponse
+
+from api.middleware.upload_validation import validate_upload
+from vaaniflow.config import settings
 from vaaniflow.models import (
-    DubbingJob, DubbingJobConfig, DubbingJobResponse, JobStatus, SupportedLanguage, TTSProvider, TranslationProvider,
+    DubbingJob,
+    DubbingJobConfig,
+    DubbingJobResponse,
+    JobStatus,
+    SupportedLanguage,
+    TranslationProvider,
+    TTSProvider,
 )
 from vaaniflow.pipeline import VaaniFlowPipeline
-from vaaniflow.config import settings
 from vaaniflow.repository.job_repository import DubbingJobRepository
-from api.middleware.upload_validation import validate_upload
 
 router = APIRouter()
 log = structlog.get_logger(__name__)
@@ -187,7 +195,9 @@ async def list_jobs():
             job_id=job.job_id,
             status=job.status,
             progress_pct=job.progress_pct,
-            output_url=f"/jobs/{job.job_id}/download" if job.status == JobStatus.COMPLETED else None,
+            output_url=f"/jobs/{job.job_id}/download"
+            if job.status == JobStatus.COMPLETED
+            else None,
             error=job.error_message,
         )
         for job in await job_repo.list_all()
@@ -207,4 +217,3 @@ async def run_pipeline_task(job: DubbingJob, input_path: Path):
         await job_repo.save(job)
     finally:
         input_path.unlink(missing_ok=True)
-

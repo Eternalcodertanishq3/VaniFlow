@@ -2,7 +2,9 @@
 Request/Response structured logging middleware.
 Logs every HTTP request with method, path, status, and duration.
 """
+
 import time
+
 import structlog
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request

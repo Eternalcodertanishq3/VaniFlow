@@ -1,9 +1,11 @@
 """
 Health check endpoints — liveness, readiness, and dependency diagnostics.
 """
+
 import shutil
-from fastapi import APIRouter
+
 import structlog
+from fastapi import APIRouter
 
 from vaaniflow.config import settings
 
@@ -102,6 +104,7 @@ async def _check_redis() -> bool:
     """Check Redis connectivity with a fast timeout."""
     try:
         import redis.asyncio as aioredis
+
         r = aioredis.from_url(settings.redis_url, socket_connect_timeout=1)
         await r.ping()
         await r.close()
@@ -114,4 +117,5 @@ async def _check_redis() -> bool:
 async def _check_whisper() -> bool:
     """Check if faster-whisper is importable."""
     import importlib.util
+
     return importlib.util.find_spec("faster_whisper") is not None

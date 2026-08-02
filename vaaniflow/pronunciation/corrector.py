@@ -4,8 +4,11 @@ IndianNamePronunciationCorrector — correct TTS pronunciation of Indian names/p
 Applied BEFORE sending text to TTS providers.
 Corrects mispronunciations by substituting phonetic hints.
 """
+
 import re
+
 import structlog
+
 from vaaniflow.pronunciation.indian_lexicon import INDIAN_PRONUNCIATION_MAP
 
 log = structlog.get_logger(__name__)
@@ -25,13 +28,8 @@ class IndianNamePronunciationCorrector:
     def _compile_patterns(self) -> list[tuple]:
         """Compile case-insensitive regex patterns for each entry."""
         patterns = []
-        for original, phonetic in sorted(
-            self.pronunciation_map.items(), key=lambda x: -len(x[0])
-        ):
-            pattern = re.compile(
-                r'\b' + re.escape(original) + r'\b',
-                re.IGNORECASE
-            )
+        for original, phonetic in sorted(self.pronunciation_map.items(), key=lambda x: -len(x[0])):
+            pattern = re.compile(r"\b" + re.escape(original) + r"\b", re.IGNORECASE)
             patterns.append((pattern, phonetic, original))
         return patterns
 

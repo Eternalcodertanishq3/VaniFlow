@@ -13,45 +13,61 @@ Pipeline stages:
   8. Stitch audio
   9. Ambient remix (if enabled)
 """
+
 import asyncio
-import structlog
 from pathlib import Path
+
+import structlog
 from structlog.contextvars import bind_contextvars, clear_contextvars
 
-from vaaniflow.models import (
-    DubbingJob, DubbingJobConfig, JobStatus, SupportedLanguage,
-    TranscriptionResult, TranslationResult, TTSResult,
-    AudioSegment, TTSProvider, TranslationProvider,
-)
-from vaaniflow.providers.tts.elevenlabs_provider import ElevenLabsProvider
-from vaaniflow.providers.tts.sarvam_provider import SarvamTTSProvider
-from vaaniflow.providers.tts.gtts_provider import GTTSProvider
-from vaaniflow.providers.translation.google_provider import GoogleTranslationProvider
-from vaaniflow.providers.translation.sarvam_provider import SarvamTranslationProvider
-from vaaniflow.providers.transcription.whisper_provider import WhisperProvider
+from vaaniflow.audio.ambient_separator import AmbientAudioPreserver
 from vaaniflow.audio.extractor import AudioExtractor
 from vaaniflow.audio.stitcher import AudioStitcher
 from vaaniflow.cache.redis_cache import TranslationCache
-from vaaniflow.exceptions import PipelineError
 from vaaniflow.config import settings
+from vaaniflow.cost import cost_tracker
 
 # Phase 2 imports
 from vaaniflow.emotion.detector import EmotionPreserver
+from vaaniflow.exceptions import PipelineError
+from vaaniflow.lipsync import LipSyncExporter
+from vaaniflow.metrics import (
+    ACTIVE_JOBS,
+    BACK_TRANSLATION_RETRIES,
+    BACK_TRANSLATION_SCORES,
+    EMOTION_DETECTIONS,
+    JOBS_TOTAL,
+    PIPELINE_STAGE_DURATION,
+    PROVIDER_ERRORS,
+    QC_SEGMENT_FAILURES,
+    TRANSLATION_CACHE_HITS,
+    TRANSLATION_CACHE_MISSES,
+    TTS_AUDIO_BYTES,
+)
+from vaaniflow.models import (
+    AudioSegment,
+    DubbingJob,
+    DubbingJobConfig,
+    JobStatus,
+    SupportedLanguage,
+    TranscriptionResult,
+    TranslationProvider,
+    TranslationResult,
+    TTSProvider,
+    TTSResult,
+)
+from vaaniflow.pronunciation.corrector import IndianNamePronunciationCorrector
+from vaaniflow.providers.transcription.whisper_provider import WhisperProvider
+from vaaniflow.providers.translation.google_provider import GoogleTranslationProvider
+from vaaniflow.providers.translation.sarvam_provider import SarvamTranslationProvider
+from vaaniflow.providers.tts.elevenlabs_provider import ElevenLabsProvider
+from vaaniflow.providers.tts.gtts_provider import GTTSProvider
+from vaaniflow.providers.tts.sarvam_provider import SarvamTTSProvider
+from vaaniflow.qc.models import QCConfig, QCStatus
+from vaaniflow.qc.pipeline import QualityController
 from vaaniflow.quality.back_translation import BackTranslationQualityScorer
 from vaaniflow.segmentation.boundary_optimizer import SmartSegmentBoundaryOptimizer
-from vaaniflow.pronunciation.corrector import IndianNamePronunciationCorrector
-from vaaniflow.audio.ambient_separator import AmbientAudioPreserver
-from vaaniflow.qc.pipeline import QualityController
-from vaaniflow.qc.models import QCConfig, QCStatus
-from vaaniflow.cost import cost_tracker
-from vaaniflow.lipsync import LipSyncExporter
 from vaaniflow.subtitles import SubtitleGenerator
-from vaaniflow.metrics import (
-    JOBS_TOTAL, ACTIVE_JOBS, PIPELINE_STAGE_DURATION,
-    TRANSLATION_CACHE_HITS, TRANSLATION_CACHE_MISSES,
-    PROVIDER_ERRORS, TTS_AUDIO_BYTES, QC_SEGMENT_FAILURES,
-    EMOTION_DETECTIONS, BACK_TRANSLATION_SCORES, BACK_TRANSLATION_RETRIES,
-)
 
 log = structlog.get_logger(__name__)
 
@@ -81,9 +97,7 @@ class VaaniFlowPipeline:
         self.transcription_provider = WhisperProvider()
 
         # Phase 2: Feature modules
-        self.emotion_preserver = EmotionPreserver(
-            enabled=settings.emotion_detection_enabled
-        )
+        self.emotion_preserver = EmotionPreserver(enabled=settings.emotion_detection_enabled)
         self.back_translation_scorer = BackTranslationQualityScorer(
             threshold=settings.back_translation_threshold,
             enabled=settings.back_translation_enabled,
@@ -94,9 +108,7 @@ class VaaniFlowPipeline:
         self.pronunciation_corrector = IndianNamePronunciationCorrector(
             enabled=settings.pronunciation_correction_enabled
         )
-        self.ambient_preserver = AmbientAudioPreserver(
-            enabled=settings.ambient_separation_enabled
-        )
+        self.ambient_preserver = AmbientAudioPreserver(enabled=settings.ambient_separation_enabled)
         self.qc_controller = QualityController(
             config=QCConfig(
                 max_silence_ratio=settings.qc_max_silence_ratio,
@@ -189,9 +201,17 @@ class VaaniFlowPipeline:
                     for seg_result in qc_result.segments:
                         if seg_result.status == QCStatus.FAIL:
                             for issue in seg_result.issues:
-                                reason = "silence" if "silence" in issue.lower() else \
-                                         "length" if "length" in issue.lower() or "long" in issue.lower() or "short" in issue.lower() else \
-                                         "size" if "small" in issue.lower() else "other"
+                                reason = (
+                                    "silence"
+                                    if "silence" in issue.lower()
+                                    else "length"
+                                    if "length" in issue.lower()
+                                    or "long" in issue.lower()
+                                    or "short" in issue.lower()
+                                    else "size"
+                                    if "small" in issue.lower()
+                                    else "other"
+                                )
                                 QC_SEGMENT_FAILURES.labels(reason=reason).inc()
 
                     log.info(
@@ -213,7 +233,9 @@ class VaaniFlowPipeline:
             log.info("stitching_completed", output_path=str(output_path))
 
             # Stage 6.5: Ambient remix (Phase 2)
-            if (settings.ambient_separation_enabled and job.config.preserve_ambient) and ambient_bytes:
+            if (
+                settings.ambient_separation_enabled and job.config.preserve_ambient
+            ) and ambient_bytes:
                 with PIPELINE_STAGE_DURATION.labels("ambient_remix").time():
                     dubbed_bytes = output_path.read_bytes()
                     remixed = await self.ambient_preserver.remix(dubbed_bytes, ambient_bytes)
@@ -288,7 +310,10 @@ class VaaniFlowPipeline:
         # Effective source language (use detected language if config is 'auto')
         effective_source = (
             transcription.source_language
-            if (config.source_language == SupportedLanguage.AUTO or config.source_language == "auto") and transcription.source_language
+            if (
+                config.source_language == SupportedLanguage.AUTO or config.source_language == "auto"
+            )
+            and transcription.source_language
             else config.source_language
         )
 
@@ -312,7 +337,9 @@ class VaaniFlowPipeline:
             indices, texts, keys = zip(*texts_to_translate)
             try:
                 translated = await provider.translate_batch(
-                    list(texts), effective_source, config.target_language,
+                    list(texts),
+                    effective_source,
+                    config.target_language,
                     speaker_gender=config.speaker_gender,
                     translation_mode=config.translation_mode,
                 )
@@ -324,12 +351,12 @@ class VaaniFlowPipeline:
                 )
                 fallback_trans = self.translation_providers[TranslationProvider.GOOGLE]
                 translated = await fallback_trans.translate_batch(
-                    list(texts), effective_source, config.target_language,
+                    list(texts),
+                    effective_source,
+                    config.target_language,
                 )
 
-            cost_tracker.record_translation_call(
-                str(config.translation_provider.value), len(texts)
-            )
+            cost_tracker.record_translation_call(str(config.translation_provider.value), len(texts))
             for idx, key, result in zip(indices, keys, translated):
                 cached_results[idx] = result
                 await self.cache.set(key, result)
@@ -408,18 +435,13 @@ class VaaniFlowPipeline:
         # Phase 2: Pre-detect emotions for all segments from original audio in parallel
         emotions = {}
         if translation.segments:
-            segment_audios = await asyncio.gather(*[
-                self._extract_segment_audio(raw_audio_path, seg)
-                for seg in translation.segments
-            ])
-            emotion_results = await asyncio.gather(*[
-                self.emotion_preserver.detect(audio)
-                for audio in segment_audios
-            ])
-            emotions = {
-                seg.index: emo
-                for seg, emo in zip(translation.segments, emotion_results)
-            }
+            segment_audios = await asyncio.gather(
+                *[self._extract_segment_audio(raw_audio_path, seg) for seg in translation.segments]
+            )
+            emotion_results = await asyncio.gather(
+                *[self.emotion_preserver.detect(audio) for audio in segment_audios]
+            )
+            emotions = {seg.index: emo for seg, emo in zip(translation.segments, emotion_results)}
 
         # Synthesize all segments concurrently for speed
         tasks = [
@@ -459,16 +481,16 @@ class VaaniFlowPipeline:
         # Phase 2: Emotion detection from original audio is pre-calculated
         if emotion is None:
             emotion = await self.emotion_preserver.detect(b"")
-            
+
         EMOTION_DETECTIONS.labels(emotion=emotion.label.value).inc()
 
         request = TTSSynthesisRequest(
             text=text_for_tts,
             language=config.target_language,
             voice_id=config.voice_id,
-            speaking_rate=emotion.speaking_rate,   # emotion-aware
-            pitch=emotion.pitch_shift,             # emotion-aware
-            loudness=config.loudness,              # job-level loudness setting
+            speaking_rate=emotion.speaking_rate,  # emotion-aware
+            pitch=emotion.pitch_shift,  # emotion-aware
+            loudness=config.loudness,  # job-level loudness setting
         )
 
         log.debug(
@@ -502,27 +524,30 @@ class VaaniFlowPipeline:
         job.status = status
         job.progress_pct = progress
         from datetime import datetime, timezone
+
         job.updated_at = datetime.now(timezone.utc)
 
     async def _extract_segment_audio(self, audio_path: Path, segment: AudioSegment) -> bytes:
         """Extract a segment's audio from the main 16kHz mono WAV file."""
+
         def slice_wav():
-            import wave
             import io
+            import wave
+
             try:
-                with wave.open(str(audio_path), 'rb') as wav:
+                with wave.open(str(audio_path), "rb") as wav:
                     framerate = wav.getframerate()
                     sampwidth = wav.getsampwidth()
                     nchannels = wav.getnchannels()
-                    
+
                     start_frame = int((segment.start_ms / 1000.0) * framerate)
                     frames_to_read = int((segment.duration_ms / 1000.0) * framerate)
-                    
+
                     wav.setpos(start_frame)
                     frames = wav.readframes(frames_to_read)
-                    
+
                     out_io = io.BytesIO()
-                    with wave.open(out_io, 'wb') as out_wav:
+                    with wave.open(out_io, "wb") as out_wav:
                         out_wav.setnchannels(nchannels)
                         out_wav.setsampwidth(sampwidth)
                         out_wav.setframerate(framerate)
@@ -531,6 +556,7 @@ class VaaniFlowPipeline:
             except Exception as e:
                 log.warning("audio_slice_failed", error=str(e), segment=segment.index)
                 return b""
-                
+
         import asyncio
+
         return await asyncio.to_thread(slice_wav)

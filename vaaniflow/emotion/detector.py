@@ -13,45 +13,47 @@ Emotion detection pipeline:
 This is designed to be fast and local — no API call needed.
 Runs in executor to avoid blocking the event loop.
 """
+
 import asyncio
-import structlog
+import io
 from dataclasses import dataclass
 from enum import Enum
-import io
+
+import structlog
 
 log = structlog.get_logger(__name__)
 
 
 class EmotionLabel(str, Enum):
-    NEUTRAL  = "neutral"
-    HAPPY    = "happy"
-    SAD      = "sad"
-    ANGRY    = "angry"
-    EXCITED  = "excited"
-    FEARFUL  = "fearful"
+    NEUTRAL = "neutral"
+    HAPPY = "happy"
+    SAD = "sad"
+    ANGRY = "angry"
+    EXCITED = "excited"
+    FEARFUL = "fearful"
 
 
 @dataclass
 class EmotionResult:
     label: EmotionLabel
-    confidence: float           # 0.0 - 1.0
-    pitch_mean_hz: float        # mean pitch of segment
-    energy_rms: float           # RMS energy
-    tempo_bpm: float            # estimated speaking tempo
+    confidence: float  # 0.0 - 1.0
+    pitch_mean_hz: float  # mean pitch of segment
+    energy_rms: float  # RMS energy
+    tempo_bpm: float  # estimated speaking tempo
     # Derived TTS parameters
-    speaking_rate: float        # inject into TTSSynthesisRequest
-    pitch_shift: float          # inject into TTSSynthesisRequest
-    tts_stability: float        # inject into ElevenLabs voice settings
+    speaking_rate: float  # inject into TTSSynthesisRequest
+    pitch_shift: float  # inject into TTSSynthesisRequest
+    tts_stability: float  # inject into ElevenLabs voice settings
 
 
 # Emotion -> TTS parameter mapping
 EMOTION_TTS_PARAMS = {
-    EmotionLabel.NEUTRAL:  {"speaking_rate": 1.0,  "pitch_shift": 0.0,  "stability": 0.75},
-    EmotionLabel.HAPPY:    {"speaking_rate": 1.1,  "pitch_shift": 0.15, "stability": 0.6},
-    EmotionLabel.SAD:      {"speaking_rate": 0.88, "pitch_shift": -0.1, "stability": 0.85},
-    EmotionLabel.ANGRY:    {"speaking_rate": 1.15, "pitch_shift": 0.05, "stability": 0.45},
-    EmotionLabel.EXCITED:  {"speaking_rate": 1.2,  "pitch_shift": 0.2,  "stability": 0.4},
-    EmotionLabel.FEARFUL:  {"speaking_rate": 1.05, "pitch_shift": 0.1,  "stability": 0.55},
+    EmotionLabel.NEUTRAL: {"speaking_rate": 1.0, "pitch_shift": 0.0, "stability": 0.75},
+    EmotionLabel.HAPPY: {"speaking_rate": 1.1, "pitch_shift": 0.15, "stability": 0.6},
+    EmotionLabel.SAD: {"speaking_rate": 0.88, "pitch_shift": -0.1, "stability": 0.85},
+    EmotionLabel.ANGRY: {"speaking_rate": 1.15, "pitch_shift": 0.05, "stability": 0.45},
+    EmotionLabel.EXCITED: {"speaking_rate": 1.2, "pitch_shift": 0.2, "stability": 0.4},
+    EmotionLabel.FEARFUL: {"speaking_rate": 1.05, "pitch_shift": 0.1, "stability": 0.55},
 }
 
 
@@ -73,6 +75,7 @@ class EmotionPreserver:
     def _check_librosa(self) -> bool:
         if self._librosa_available is None:
             import importlib.util
+
             self._librosa_available = importlib.util.find_spec("librosa") is not None
             if not self._librosa_available:
                 log.warning(
@@ -113,9 +116,15 @@ class EmotionPreserver:
 
         # Feature extraction
         pitch_mean = self._extract_pitch(y, sr)
-        energy_rms = float(np.sqrt(np.mean(y ** 2)))
+        energy_rms = float(np.sqrt(np.mean(y**2)))
         tempo_val = librosa.beat.beat_track(y=y, sr=sr)
-        tempo = float(tempo_val[0]) if hasattr(tempo_val[0], '__float__') else float(tempo_val[0].item()) if hasattr(tempo_val[0], 'item') else 120.0
+        tempo = (
+            float(tempo_val[0])
+            if hasattr(tempo_val[0], "__float__")
+            else float(tempo_val[0].item())
+            if hasattr(tempo_val[0], "item")
+            else 120.0
+        )
 
         # Spectral features for additional discrimination
         spectral_centroid = float(np.mean(librosa.feature.spectral_centroid(y=y, sr=sr)))
@@ -155,10 +164,10 @@ class EmotionPreserver:
         """Extract mean fundamental frequency (F0)."""
         import librosa
         import numpy as np
+
         try:
             f0, voiced_flag, _ = librosa.pyin(
-                y, fmin=librosa.note_to_hz("C2"),
-                fmax=librosa.note_to_hz("C7"), sr=sr
+                y, fmin=librosa.note_to_hz("C2"), fmax=librosa.note_to_hz("C7"), sr=sr
             )
             voiced_f0 = f0[voiced_flag > 0.5] if f0 is not None else np.array([])
             return float(np.mean(voiced_f0)) if len(voiced_f0) > 0 else 0.0
@@ -166,20 +175,24 @@ class EmotionPreserver:
             return 0.0
 
     def _classify_emotion(
-        self, pitch_mean: float, energy_rms: float,
-        tempo: float, spectral_centroid: float, zcr: float
+        self,
+        pitch_mean: float,
+        energy_rms: float,
+        tempo: float,
+        spectral_centroid: float,
+        zcr: float,
     ) -> EmotionLabel:
         """
         Rule-based emotion classifier.
         Based on prosodic feature research for speech emotion recognition.
         """
-        HIGH_PITCH     = pitch_mean > 220
-        LOW_PITCH      = pitch_mean < 130 and pitch_mean > 0
-        HIGH_ENERGY    = energy_rms > 0.08
-        LOW_ENERGY     = energy_rms < 0.02
-        FAST_TEMPO     = tempo > 150
-        SLOW_TEMPO     = tempo < 90
-        HIGH_CENTROID  = spectral_centroid > 3000
+        HIGH_PITCH = pitch_mean > 220
+        LOW_PITCH = pitch_mean < 130 and pitch_mean > 0
+        HIGH_ENERGY = energy_rms > 0.08
+        LOW_ENERGY = energy_rms < 0.02
+        FAST_TEMPO = tempo > 150
+        SLOW_TEMPO = tempo < 90
+        HIGH_CENTROID = spectral_centroid > 3000
 
         if HIGH_ENERGY and FAST_TEMPO and HIGH_PITCH:
             return EmotionLabel.EXCITED
@@ -197,8 +210,11 @@ class EmotionPreserver:
     def _neutral_result(self) -> EmotionResult:
         params = EMOTION_TTS_PARAMS[EmotionLabel.NEUTRAL]
         return EmotionResult(
-            label=EmotionLabel.NEUTRAL, confidence=1.0,
-            pitch_mean_hz=0.0, energy_rms=0.0, tempo_bpm=0.0,
+            label=EmotionLabel.NEUTRAL,
+            confidence=1.0,
+            pitch_mean_hz=0.0,
+            energy_rms=0.0,
+            tempo_bpm=0.0,
             speaking_rate=params["speaking_rate"],
             pitch_shift=params["pitch_shift"],
             tts_stability=params["stability"],

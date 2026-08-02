@@ -2,27 +2,39 @@
 Sarvam AI Translation API provider.
 Primary provider for Indian language translation.
 """
+
 import asyncio
+
 import aiohttp
 import structlog
 
-from vaaniflow.providers.translation.base import BaseTranslationProvider
-from vaaniflow.models import SupportedLanguage
+from vaaniflow.config import settings
 from vaaniflow.exceptions import (
-    RateLimitError,
     AuthenticationError,
     ProviderServerError,
     ProviderTimeoutError,
+    RateLimitError,
     TranslationError,
 )
-from vaaniflow.utils.retry import retry_on_rate_limit, retry_on_server_error, no_retry_on_auth_error
-from vaaniflow.config import settings
+from vaaniflow.models import SupportedLanguage
+from vaaniflow.providers.translation.base import BaseTranslationProvider
+from vaaniflow.utils.retry import no_retry_on_auth_error, retry_on_rate_limit, retry_on_server_error
 
 log = structlog.get_logger(__name__)
 
 SARVAM_TRANSLATE_URL = "https://api.sarvam.ai/translate"
 SARVAM_SUPPORTED_LANGUAGES = {
-    "en", "hi", "bn", "te", "mr", "ta", "gu", "kn", "ml", "pa", "or",
+    "en",
+    "hi",
+    "bn",
+    "te",
+    "mr",
+    "ta",
+    "gu",
+    "kn",
+    "ml",
+    "pa",
+    "or",
 }
 
 # Sarvam uses its own language codes
@@ -76,8 +88,16 @@ class SarvamTranslationProvider(BaseTranslationProvider):
         **kwargs,
     ) -> str:
         """Translate text using Sarvam AI API."""
-        source = source_language.value if isinstance(source_language, SupportedLanguage) else source_language
-        target = target_language.value if isinstance(target_language, SupportedLanguage) else target_language
+        source = (
+            source_language.value
+            if isinstance(source_language, SupportedLanguage)
+            else source_language
+        )
+        target = (
+            target_language.value
+            if isinstance(target_language, SupportedLanguage)
+            else target_language
+        )
 
         source_sarvam = SARVAM_LANG_MAP.get(source, source)
         target_sarvam = SARVAM_LANG_MAP.get(target, target)
@@ -139,10 +159,7 @@ class SarvamTranslationProvider(BaseTranslationProvider):
         Sarvam API is single-text only.
         Translate each text concurrently using asyncio.gather.
         """
-        tasks = [
-            self.translate(text, source_language, target_language, **kwargs)
-            for text in texts
-        ]
+        tasks = [self.translate(text, source_language, target_language, **kwargs) for text in texts]
         return await asyncio.gather(*tasks)
 
     async def health_check(self) -> bool:

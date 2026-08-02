@@ -2,16 +2,18 @@
 Audio stitching — reassemble TTS segments with original timing.
 Uses native FFmpeg filtergraphs for highly efficient stream processing.
 """
-import shutil
-import tempfile
+
 import asyncio
+import shutil
 import subprocess
+import tempfile
 from pathlib import Path
+
 import structlog
 
-from vaaniflow.models import AudioSegment
-from vaaniflow.exceptions import AudioProcessingError
 from vaaniflow.config import settings
+from vaaniflow.exceptions import AudioProcessingError
+from vaaniflow.models import AudioSegment
 
 log = structlog.get_logger(__name__)
 
@@ -86,7 +88,9 @@ class AudioStitcher:
                     if gap_ms > 0:
                         gap_sec = gap_ms / 1000.0
                         silence_label = f"silence{i}"
-                        filter_parts.append(f"aevalsrc=exprs=0:d={gap_sec}:s=44100[{silence_label}]")
+                        filter_parts.append(
+                            f"aevalsrc=exprs=0:d={gap_sec}:s=44100[{silence_label}]"
+                        )
                         concat_inputs.append(f"[{silence_label}]")
                         log.debug("gap_silence_added", index=i, gap_ms=round(gap_ms, 1))
 
@@ -131,7 +135,9 @@ class AudioStitcher:
                     filter_parts.append(f"aevalsrc=exprs=0:d={total_sec}:s=44100[outa]")
                     concat_inputs = ["[outa]"]
                 else:
-                    concat_filter = "".join(concat_inputs) + f"concat=n={len(concat_inputs)}:v=0:a=1[outa]"
+                    concat_filter = (
+                        "".join(concat_inputs) + f"concat=n={len(concat_inputs)}:v=0:a=1[outa]"
+                    )
                     filter_parts.append(concat_filter)
 
                 filtergraph = ";".join(filter_parts)
@@ -141,18 +147,26 @@ class AudioStitcher:
                 for inp in inputs:
                     cmd.extend(["-i", inp])
 
-                cmd.extend([
-                    "-filter_complex", filtergraph,
-                    "-map", "[outa]",
-                    "-ac", "1",
-                    "-ar", "44100",
-                    str(output_path)
-                ])
+                cmd.extend(
+                    [
+                        "-filter_complex",
+                        filtergraph,
+                        "-map",
+                        "[outa]",
+                        "-ac",
+                        "1",
+                        "-ar",
+                        "44100",
+                        str(output_path),
+                    ]
+                )
 
                 log.debug("ffmpeg_stitching_cmd", command=" ".join(cmd))
 
                 def _run_stitch():
-                    res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=120)
+                    res = subprocess.run(
+                        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=120
+                    )
                     if res.returncode != 0:
                         err = res.stderr.decode(errors="replace") if res.stderr else "Unknown error"
                         log.error("ffmpeg_stitching_failed", stderr=err[:500])
@@ -188,15 +202,22 @@ class AudioStitcher:
 
         def _run_merge():
             cmd = [
-                ffmpeg_path, "-y",
-                "-i", str(original_video_path),
-                "-i", str(dubbed_audio_path),
-                "-map", "0:v:0",
-                "-map", "1:a:0",
-                "-c:v", "copy",
-                "-c:a", "aac",
+                ffmpeg_path,
+                "-y",
+                "-i",
+                str(original_video_path),
+                "-i",
+                str(dubbed_audio_path),
+                "-map",
+                "0:v:0",
+                "-map",
+                "1:a:0",
+                "-c:v",
+                "copy",
+                "-c:a",
+                "aac",
                 "-shortest",
-                str(output_video_path)
+                str(output_video_path),
             ]
             res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=120)
             if res.returncode == 0 and output_video_path.exists():
@@ -214,9 +235,14 @@ class AudioStitcher:
 
         def _run_ffprobe():
             cmd = [
-                ffprobe_path, "-v", "error", "-show_entries",
-                "format=duration", "-of",
-                "default=noprint_wrappers=1:nokey=1", str(file_path)
+                ffprobe_path,
+                "-v",
+                "error",
+                "-show_entries",
+                "format=duration",
+                "-of",
+                "default=noprint_wrappers=1:nokey=1",
+                str(file_path),
             ]
             res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
             if res.returncode == 0:

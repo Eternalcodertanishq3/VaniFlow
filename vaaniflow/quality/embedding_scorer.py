@@ -15,16 +15,18 @@ both, with passing EITHER metric being sufficient (they catch different
 failure modes: BLEU catches lexical/numeric errors, embeddings catch
 meaning-preserving paraphrases that BLEU wrongly penalizes).
 """
+
 import asyncio
-import structlog
 from dataclasses import dataclass
+
+import structlog
 
 log = structlog.get_logger(__name__)
 
 
 @dataclass
 class EmbeddingScore:
-    cosine_similarity: float    # 0.0 - 1.0
+    cosine_similarity: float  # 0.0 - 1.0
     passed: bool
     model_used: str
 
@@ -44,11 +46,15 @@ class EmbeddingQualityScorer:
         if self._model is None and not self._model_load_failed:
             try:
                 from sentence_transformers import SentenceTransformer
+
                 self._model = SentenceTransformer(self.MODEL_NAME)
                 log.info("embedding_model_loaded", model=self.MODEL_NAME)
             except Exception as e:
-                log.warning("embedding_model_load_failed", error=str(e),
-                            fallback="embedding scoring disabled, BLEU-only")
+                log.warning(
+                    "embedding_model_load_failed",
+                    error=str(e),
+                    fallback="embedding scoring disabled, BLEU-only",
+                )
                 self._model_load_failed = True
         return self._model
 
@@ -69,15 +75,22 @@ class EmbeddingQualityScorer:
                 None, self._compute_similarity_sync, model, original_text, back_translated_text
             )
             passed = similarity >= self.threshold
-            log.debug("embedding_similarity_scored", similarity=round(similarity, 3),
-                      threshold=self.threshold, passed=passed)
-            return EmbeddingScore(cosine_similarity=similarity, passed=passed, model_used=self.MODEL_NAME)
+            log.debug(
+                "embedding_similarity_scored",
+                similarity=round(similarity, 3),
+                threshold=self.threshold,
+                passed=passed,
+            )
+            return EmbeddingScore(
+                cosine_similarity=similarity, passed=passed, model_used=self.MODEL_NAME
+            )
         except Exception as e:
             log.warning("embedding_scoring_failed", error=str(e))
             return EmbeddingScore(cosine_similarity=1.0, passed=True, model_used="error_fallback")
 
     def _compute_similarity_sync(self, model, text_a: str, text_b: str) -> float:
         import numpy as np
+
         embeddings = model.encode([text_a, text_b], convert_to_numpy=True)
         a, b = embeddings[0], embeddings[1]
         norm_a, norm_b = np.linalg.norm(a), np.linalg.norm(b)

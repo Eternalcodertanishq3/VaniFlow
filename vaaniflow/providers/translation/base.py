@@ -1,7 +1,9 @@
 """
 Abstract base class for translation providers.
 """
+
 from abc import ABC, abstractmethod
+
 import structlog
 
 from vaaniflow.models import SupportedLanguage
@@ -61,10 +63,8 @@ class BaseTranslationProvider(ABC):
         Default implementation calls translate() N times concurrently (override for efficiency).
         """
         import asyncio
-        tasks = [
-            self.translate(text, source_language, target_language)
-            for text in texts
-        ]
+
+        tasks = [self.translate(text, source_language, target_language) for text in texts]
         return await asyncio.gather(*tasks)
 
     async def translate_with_logging(

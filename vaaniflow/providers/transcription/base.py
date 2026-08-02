@@ -1,8 +1,10 @@
 """
 Abstract base class for transcription providers.
 """
+
 from abc import ABC, abstractmethod
 from pathlib import Path
+
 import structlog
 
 from vaaniflow.models import TranscriptionResult
@@ -19,9 +21,7 @@ class BaseTranscriptionProvider(ABC):
     provider_name: str = "base"
 
     @abstractmethod
-    async def transcribe(
-        self, audio_path: Path, source_language: str
-    ) -> TranscriptionResult:
+    async def transcribe(self, audio_path: Path, source_language: str) -> TranscriptionResult:
         """
         Transcribe audio file to text with segment timestamps.
 

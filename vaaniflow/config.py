@@ -2,8 +2,9 @@
 Application configuration using Pydantic Settings.
 Loads from environment variables / .env file.
 """
-from pydantic_settings import BaseSettings
+
 from pydantic import Field
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -47,7 +48,9 @@ class Settings(BaseSettings):
     back_translation_enabled: bool = Field(default=True, alias="BACK_TRANSLATION_ENABLED")
     back_translation_threshold: float = Field(default=0.30, alias="BACK_TRANSLATION_THRESHOLD")
     boundary_optimization_enabled: bool = Field(default=True, alias="BOUNDARY_OPTIMIZATION_ENABLED")
-    pronunciation_correction_enabled: bool = Field(default=True, alias="PRONUNCIATION_CORRECTION_ENABLED")
+    pronunciation_correction_enabled: bool = Field(
+        default=True, alias="PRONUNCIATION_CORRECTION_ENABLED"
+    )
     ambient_separation_enabled: bool = Field(default=True, alias="AMBIENT_SEPARATION_ENABLED")
     qc_enabled: bool = Field(default=True, alias="QC_ENABLED")
     qc_max_silence_ratio: float = Field(default=0.7, alias="QC_MAX_SILENCE_RATIO")
@@ -55,7 +58,9 @@ class Settings(BaseSettings):
 
     # Phase 3: Showcase features
     lipsync_export_enabled: bool = Field(default=False, alias="LIPSYNC_EXPORT_ENABLED")
-    code_switch_normalization_enabled: bool = Field(default=True, alias="CODE_SWITCH_NORMALIZATION_ENABLED")
+    code_switch_normalization_enabled: bool = Field(
+        default=True, alias="CODE_SWITCH_NORMALIZATION_ENABLED"
+    )
     subtitle_generation_enabled: bool = Field(default=True, alias="SUBTITLE_GENERATION_ENABLED")
 
     # API Security

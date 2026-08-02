@@ -7,9 +7,11 @@ and provides a real-time cost dashboard via the /stats endpoint.
 This is critical for enterprise Indic AI deployments where
 cost-per-token at scale is a massive factor.
 """
+
 import time
 from dataclasses import dataclass
 from threading import Lock
+
 import structlog
 
 log = structlog.get_logger(__name__)
@@ -18,6 +20,7 @@ log = structlog.get_logger(__name__)
 @dataclass
 class ProviderCostRate:
     """Cost per API call for each provider (in USD)."""
+
     name: str
     cost_per_translation_call: float = 0.0
     cost_per_tts_call: float = 0.0
@@ -27,23 +30,23 @@ class ProviderCostRate:
 PROVIDER_COSTS = {
     "sarvam": ProviderCostRate(
         name="sarvam",
-        cost_per_translation_call=0.002,   # ~$2/1000 calls
-        cost_per_tts_call=0.004,           # ~$4/1000 calls
+        cost_per_translation_call=0.002,  # ~$2/1000 calls
+        cost_per_tts_call=0.004,  # ~$4/1000 calls
     ),
     "google": ProviderCostRate(
         name="google",
-        cost_per_translation_call=0.005,   # ~$5/1000 calls
+        cost_per_translation_call=0.005,  # ~$5/1000 calls
         cost_per_tts_call=0.0,
     ),
     "elevenlabs": ProviderCostRate(
         name="elevenlabs",
         cost_per_translation_call=0.0,
-        cost_per_tts_call=0.018,           # ~$18/1000 calls
+        cost_per_tts_call=0.018,  # ~$18/1000 calls
     ),
     "gtts": ProviderCostRate(
         name="gtts",
         cost_per_translation_call=0.0,
-        cost_per_tts_call=0.0,             # Free
+        cost_per_tts_call=0.0,  # Free
     ),
 }
 
@@ -90,9 +93,7 @@ class CostTracker:
         """Record actual API translation calls made."""
         with self._lock:
             self.total_translation_api_calls += count
-            self.provider_call_counts[provider] = (
-                self.provider_call_counts.get(provider, 0) + count
-            )
+            self.provider_call_counts[provider] = self.provider_call_counts.get(provider, 0) + count
 
     def record_cache_hit(self, count: int = 1):
         """Record translation cache hits (API calls avoided)."""
@@ -104,9 +105,7 @@ class CostTracker:
         with self._lock:
             self.total_tts_api_calls += count
             key = f"{provider}_tts"
-            self.provider_call_counts[key] = (
-                self.provider_call_counts.get(key, 0) + count
-            )
+            self.provider_call_counts[key] = self.provider_call_counts.get(key, 0) + count
 
     def record_segments(self, count: int):
         """Record total segments processed."""

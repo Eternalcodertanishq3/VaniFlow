@@ -17,9 +17,11 @@ BLEU score interpretation for short segments:
   0.3-0.5 = Acceptable, note warning
   < 0.3  = Fail, retry with alternate provider
 """
+
 import asyncio
-import structlog
 from dataclasses import dataclass
+
+import structlog
 
 from vaaniflow.quality.embedding_scorer import EmbeddingQualityScorer
 
@@ -31,8 +33,8 @@ class BackTranslationScore:
     original_text: str
     translated_text: str
     back_translated_text: str
-    bleu_score: float           # 0.0 - 1.0
-    passed: bool                # True if quality is acceptable
+    bleu_score: float  # 0.0 - 1.0
+    passed: bool  # True if quality is acceptable
     should_retry: bool
     embedding_similarity: float = 1.0
     embedding_model_used: str = "disabled"
@@ -54,8 +56,13 @@ class BackTranslationQualityScorer:
             # retry with alternate provider
     """
 
-    def __init__(self, threshold: float = 0.30, enabled: bool = True,
-                 embedding_enabled: bool = True, embedding_threshold: float = 0.75):
+    def __init__(
+        self,
+        threshold: float = 0.30,
+        enabled: bool = True,
+        embedding_enabled: bool = True,
+        embedding_threshold: float = 0.75,
+    ):
         self.threshold = threshold
         self.enabled = enabled
         self._nltk_ready = False
@@ -68,6 +75,7 @@ class BackTranslationQualityScorer:
         if not self._nltk_ready:
             try:
                 import nltk
+
                 loop = asyncio.get_event_loop()
                 await loop.run_in_executor(None, lambda: nltk.download("punkt", quiet=True))
                 await loop.run_in_executor(None, lambda: nltk.download("punkt_tab", quiet=True))
@@ -109,7 +117,7 @@ class BackTranslationQualityScorer:
 
             # Compute BLEU score
             bleu = await self._compute_bleu(original_text, back_translated)
-            
+
             embedding_result = await self.embedding_scorer.score(original_text, back_translated)
             passed = (bleu >= self.threshold) or embedding_result.passed
 
@@ -136,8 +144,12 @@ class BackTranslationQualityScorer:
         except Exception as e:
             log.warning("back_translation_scoring_failed", error=str(e))
             return BackTranslationScore(
-                original_text=original_text, translated_text=translated_text,
-                back_translated_text="", bleu_score=0.5, passed=True, should_retry=False,
+                original_text=original_text,
+                translated_text=translated_text,
+                back_translated_text="",
+                bleu_score=0.5,
+                passed=True,
+                should_retry=False,
             )
 
     async def _compute_bleu(self, reference: str, hypothesis: str) -> float:
@@ -147,7 +159,7 @@ class BackTranslationQualityScorer:
 
     def _bleu_sync(self, reference: str, hypothesis: str) -> float:
         try:
-            from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
+            from nltk.translate.bleu_score import SmoothingFunction, sentence_bleu
 
             ref_tokens = reference.lower().split()
             hyp_tokens = hypothesis.lower().split()
@@ -157,7 +169,8 @@ class BackTranslationQualityScorer:
 
             smoother = SmoothingFunction().method1
             score = sentence_bleu(
-                [ref_tokens], hyp_tokens,
+                [ref_tokens],
+                hyp_tokens,
                 smoothing_function=smoother,
                 weights=(0.5, 0.5, 0.0, 0.0),  # unigram + bigram only for short text
             )

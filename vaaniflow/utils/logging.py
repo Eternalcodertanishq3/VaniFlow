@@ -3,8 +3,10 @@ Structured logging with structlog.
 Every log event must be JSON-serializable with consistent fields.
 Sarvam wants "making systems observable" — this is how.
 """
+
 import logging
 import sys
+
 import structlog
 from structlog.types import EventDict, WrappedLogger
 
@@ -28,9 +30,7 @@ def setup_logging(log_level: str = "INFO") -> None:
 
     if sys.stderr.isatty():
         # Development: pretty colored output
-        processors = shared_processors + [
-            structlog.dev.ConsoleRenderer(colors=True)
-        ]
+        processors = shared_processors + [structlog.dev.ConsoleRenderer(colors=True)]
     else:
         # Production: JSON output for log aggregators
         processors = shared_processors + [
@@ -40,9 +40,7 @@ def setup_logging(log_level: str = "INFO") -> None:
 
     structlog.configure(
         processors=processors,
-        wrapper_class=structlog.make_filtering_bound_logger(
-            logging.getLevelName(log_level)
-        ),
+        wrapper_class=structlog.make_filtering_bound_logger(logging.getLevelName(log_level)),
         context_class=dict,
         logger_factory=structlog.PrintLoggerFactory(),
         cache_logger_on_first_use=True,

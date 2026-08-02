@@ -2,10 +2,10 @@
 FastAPI dependency injection.
 Provides pipeline, cache, and settings as injectable dependencies.
 """
+
+from vaaniflow.cache.redis_cache import TranslationCache
 from vaaniflow.config import Settings, settings
 from vaaniflow.pipeline import VaaniFlowPipeline
-from vaaniflow.cache.redis_cache import TranslationCache
-
 
 # Singleton pipeline instance
 _pipeline: VaaniFlowPipeline | None = None

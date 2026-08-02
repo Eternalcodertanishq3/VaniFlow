@@ -1,19 +1,19 @@
 """
 FastAPI application with proper lifespan management.
 """
-from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request, HTTPException
-from fastapi.responses import JSONResponse
-from fastapi.middleware.cors import CORSMiddleware
-import structlog
 
-from vaaniflow.utils.logging import setup_logging
-from vaaniflow.config import settings
-from api.routes import jobs, health, voices
-from api.routes import metrics
-from api.routes import stats
-from api.middleware.logging_middleware import LoggingMiddleware
+from contextlib import asynccontextmanager
+
+import structlog
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+
 from api.middleware.auth_middleware import APIKeyAuthMiddleware
+from api.middleware.logging_middleware import LoggingMiddleware
+from api.routes import health, jobs, metrics, stats, voices
+from vaaniflow.config import settings
+from vaaniflow.utils.logging import setup_logging
 
 log = structlog.get_logger(__name__)
 
@@ -49,6 +49,7 @@ app.include_router(voices.router, prefix="/voices", tags=["voices"])
 app.include_router(metrics.router, tags=["observability"])
 app.include_router(stats.router, tags=["cost-optimization"])
 
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     if isinstance(exc, HTTPException):
@@ -59,7 +60,4 @@ async def global_exception_handler(request: Request, exc: Exception):
         )
 
     log.error("unhandled_exception", error=str(exc), path=request.url.path)
-    return JSONResponse(
-        status_code=500,
-        content={"detail": "Internal server error"}
-    )
+    return JSONResponse(status_code=500, content={"detail": "Internal server error"})

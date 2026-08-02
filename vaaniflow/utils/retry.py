@@ -6,24 +6,26 @@ from server failures, add fallback logic"
 
 Each retry decorator handles a different failure type differently.
 """
+
+import logging
 from functools import wraps
+
 import structlog
 from tenacity import (
+    RetryError,
+    before_sleep_log,
     retry,
     retry_if_exception_type,
     stop_after_attempt,
     wait_exponential,
     wait_fixed,
-    before_sleep_log,
-    RetryError,
 )
-import logging
 
 from vaaniflow.exceptions import (
-    RateLimitError,
+    AuthenticationError,
     ProviderServerError,
     ProviderTimeoutError,
-    AuthenticationError,
+    RateLimitError,
 )
 
 log = structlog.get_logger(__name__)
@@ -76,18 +78,17 @@ def no_retry_on_auth_error(func):
     Fail immediately and raise to the pipeline.
     This is a configuration issue, not a transient error.
     """
+
     @wraps(func)
     async def wrapper(*args, **kwargs):
         try:
             return await func(*args, **kwargs)
         except AuthenticationError as e:
             log.error(
-                "auth_error_no_retry",
-                provider=e.provider,
-                error=str(e),
-                action="fail_immediately"
+                "auth_error_no_retry", provider=e.provider, error=str(e), action="fail_immediately"
             )
             raise  # Do not retry, propagate up immediately
+
     return wrapper
 
 
@@ -96,6 +97,7 @@ def with_provider_fallback(primary_func, fallback_func):
     Decorator factory for provider fallback.
     If primary fails after all retries, silently switch to fallback.
     """
+
     @wraps(primary_func)
     async def wrapper(*args, **kwargs):
         try:
@@ -108,4 +110,5 @@ def with_provider_fallback(primary_func, fallback_func):
                 original_error=str(e),
             )
             return await fallback_func(*args, **kwargs)
+
     return wrapper

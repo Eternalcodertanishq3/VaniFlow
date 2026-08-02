@@ -4,8 +4,10 @@ THIS IS THE KEY PATTERN Sarvam mentions: "provider abstractions"
 Every provider must implement this interface identically.
 The pipeline never depends on a concrete provider — only this interface.
 """
+
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+
 import structlog
 
 log = structlog.get_logger(__name__)
@@ -35,6 +37,7 @@ class BaseTTSProvider(ABC):
     All providers (ElevenLabs, Sarvam, gTTS) must implement these methods.
     The pipeline only ever calls methods on this interface.
     """
+
     provider_name: str = "base"
 
     @abstractmethod
@@ -59,9 +62,7 @@ class BaseTTSProvider(ABC):
         """Return True if this provider supports the given language."""
         ...
 
-    async def synthesize_with_logging(
-        self, request: TTSSynthesisRequest
-    ) -> TTSSynthesisResponse:
+    async def synthesize_with_logging(self, request: TTSSynthesisRequest) -> TTSSynthesisResponse:
         """Wrapper that adds structured logging to every synthesis call."""
         log.info(
             "tts_synthesis_started",

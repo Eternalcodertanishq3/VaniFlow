@@ -3,11 +3,13 @@ Extract audio track from video/audio files.
 Supports ffmpeg (preferred) and pydub (fallback) for format conversion.
 WAV files are passed through with minimal processing when ffmpeg is unavailable.
 """
+
 import asyncio
 import shutil
 import tempfile
 import wave
 from pathlib import Path
+
 import structlog
 
 from vaaniflow.exceptions import AudioProcessingError
@@ -103,17 +105,22 @@ class AudioExtractor:
 
         def _run_ffmpeg():
             import subprocess
+
             ffmpeg_path = _resolve_ffmpeg()
             if not ffmpeg_path:
                 raise AudioProcessingError("ffmpeg not found in PATH")
             cmd = [
-                ffmpeg_path,              # use full resolved path (Windows compat)
-                "-i", str(input_path),
-                "-vn",                    # no video
-                "-acodec", "pcm_s16le",   # 16-bit PCM
-                "-ar", str(TARGET_SAMPLE_RATE),
-                "-ac", str(TARGET_CHANNELS),
-                "-y",                     # overwrite
+                ffmpeg_path,  # use full resolved path (Windows compat)
+                "-i",
+                str(input_path),
+                "-vn",  # no video
+                "-acodec",
+                "pcm_s16le",  # 16-bit PCM
+                "-ar",
+                str(TARGET_SAMPLE_RATE),
+                "-ac",
+                str(TARGET_CHANNELS),
+                "-y",  # overwrite
                 str(output_path),
             ]
 
@@ -125,7 +132,11 @@ class AudioExtractor:
             )
 
             if result.returncode != 0:
-                error_msg = result.stderr.decode(errors="replace") if result.stderr else "Unknown ffmpeg error"
+                error_msg = (
+                    result.stderr.decode(errors="replace")
+                    if result.stderr
+                    else "Unknown ffmpeg error"
+                )
                 raise AudioProcessingError(
                     f"ffmpeg extraction failed (code {result.returncode}): {error_msg[:500]}"
                 )
@@ -149,9 +160,7 @@ class AudioExtractor:
         except AudioProcessingError:
             raise
         except FileNotFoundError:
-            raise AudioProcessingError(
-                "ffmpeg not found. Install: winget install ffmpeg"
-            )
+            raise AudioProcessingError("ffmpeg not found. Install: winget install ffmpeg")
         except Exception as e:
             raise AudioProcessingError(f"Audio extraction failed ({type(e).__name__}): {e}")
 
@@ -160,13 +169,12 @@ class AudioExtractor:
         Extract audio using pydub (requires ffmpeg for MP3/OGG decoding).
         This provides better error messages than raw subprocess.
         """
+
         def _convert():
             try:
                 from pydub import AudioSegment as PydubSegment
             except ImportError:
-                raise AudioProcessingError(
-                    "pydub is not installed. Run: pip install pydub"
-                )
+                raise AudioProcessingError("pydub is not installed. Run: pip install pydub")
 
             try:
                 audio = PydubSegment.from_file(str(input_path))
@@ -212,9 +220,10 @@ class AudioExtractor:
         Checks if already 16kHz mono — if so, just copies.
         Otherwise resamples with pure Python (basic quality).
         """
+
         def _process_wav():
             try:
-                with wave.open(str(input_path), 'rb') as wav_in:
+                with wave.open(str(input_path), "rb") as wav_in:
                     framerate = wav_in.getframerate()
                     channels = wav_in.getnchannels()
                     sampwidth = wav_in.getsampwidth()
@@ -224,6 +233,7 @@ class AudioExtractor:
                 if framerate == TARGET_SAMPLE_RATE and channels == TARGET_CHANNELS:
                     output_path = Path(tempfile.mktemp(suffix=".wav"))
                     import shutil
+
                     shutil.copy2(str(input_path), str(output_path))
                     return output_path
 
@@ -233,28 +243,26 @@ class AudioExtractor:
 
                 # Convert to mono if stereo
                 if channels == 2 and sampwidth == 2:
-                    samples = struct.unpack(f'<{len(frames) // 2}h', frames)
+                    samples = struct.unpack(f"<{len(frames) // 2}h", frames)
                     mono_samples = [
-                        (samples[i] + samples[i + 1]) // 2
-                        for i in range(0, len(samples), 2)
+                        (samples[i] + samples[i + 1]) // 2 for i in range(0, len(samples), 2)
                     ]
-                    frames = struct.pack(f'<{len(mono_samples)}h', *mono_samples)
+                    frames = struct.pack(f"<{len(mono_samples)}h", *mono_samples)
                     channels = 1
 
                 # Simple sample rate conversion (nearest-neighbor)
                 if framerate != TARGET_SAMPLE_RATE and sampwidth == 2:
-                    samples = struct.unpack(f'<{len(frames) // 2}h', frames)
+                    samples = struct.unpack(f"<{len(frames) // 2}h", frames)
                     ratio = TARGET_SAMPLE_RATE / framerate
                     new_length = int(len(samples) * ratio)
                     resampled = [
-                        samples[min(int(i / ratio), len(samples) - 1)]
-                        for i in range(new_length)
+                        samples[min(int(i / ratio), len(samples) - 1)] for i in range(new_length)
                     ]
-                    frames = struct.pack(f'<{len(resampled)}h', *resampled)
+                    frames = struct.pack(f"<{len(resampled)}h", *resampled)
                     framerate = TARGET_SAMPLE_RATE
 
                 output_path = Path(tempfile.mktemp(suffix=".wav"))
-                with wave.open(str(output_path), 'wb') as wav_out:
+                with wave.open(str(output_path), "wb") as wav_out:
                     wav_out.setnchannels(TARGET_CHANNELS)
                     wav_out.setsampwidth(2)  # 16-bit
                     wav_out.setframerate(TARGET_SAMPLE_RATE)
@@ -291,9 +299,10 @@ class AudioExtractor:
 
     async def _get_wav_duration_ms(self, audio_path: Path) -> float:
         """Get WAV duration using pure Python wave module."""
+
         def _read_duration():
             try:
-                with wave.open(str(audio_path), 'rb') as wav:
+                with wave.open(str(audio_path), "rb") as wav:
                     frames = wav.getnframes()
                     rate = wav.getframerate()
                     return (frames / rate) * 1000
@@ -304,16 +313,21 @@ class AudioExtractor:
 
     async def _get_duration_ffprobe(self, audio_path: Path) -> float:
         """Get duration using ffprobe."""
+
         def _run():
             import subprocess
+
             ffprobe_path = _resolve_ffprobe()
             if not ffprobe_path:
                 raise AudioProcessingError("ffprobe not found in PATH")
             cmd = [
-                ffprobe_path,             # use full resolved path (Windows compat)
-                "-v", "error",
-                "-show_entries", "format=duration",
-                "-of", "default=noprint_wrappers=1:nokey=1",
+                ffprobe_path,  # use full resolved path (Windows compat)
+                "-v",
+                "error",
+                "-show_entries",
+                "format=duration",
+                "-of",
+                "default=noprint_wrappers=1:nokey=1",
                 str(audio_path),
             ]
 
@@ -337,9 +351,11 @@ class AudioExtractor:
 
     async def _get_duration_pydub(self, audio_path: Path) -> float:
         """Get duration using pydub as fallback."""
+
         def _read():
             try:
                 from pydub import AudioSegment as PydubSegment
+
                 audio = PydubSegment.from_file(str(audio_path))
                 return len(audio)  # pydub returns duration in ms
             except Exception as e:

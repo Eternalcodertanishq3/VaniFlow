@@ -2,27 +2,39 @@
 Google Translate API provider.
 Uses official Google Cloud Translation REST API via aiohttp with proper error handling.
 """
+
 import asyncio
+
 import aiohttp
 import structlog
 
-from vaaniflow.providers.translation.base import BaseTranslationProvider
-from vaaniflow.models import SupportedLanguage
+from vaaniflow.config import settings
 from vaaniflow.exceptions import (
-    RateLimitError,
     AuthenticationError,
     ProviderServerError,
     ProviderTimeoutError,
+    RateLimitError,
     TranslationError,
 )
-from vaaniflow.utils.retry import retry_on_rate_limit, retry_on_server_error, no_retry_on_auth_error
-from vaaniflow.config import settings
+from vaaniflow.models import SupportedLanguage
+from vaaniflow.providers.translation.base import BaseTranslationProvider
+from vaaniflow.utils.retry import no_retry_on_auth_error, retry_on_rate_limit, retry_on_server_error
 
 log = structlog.get_logger(__name__)
 
 GOOGLE_TRANSLATE_URL = "https://translation.googleapis.com/language/translate/v2"
 GOOGLE_SUPPORTED_LANGUAGES = {
-    "en", "hi", "bn", "te", "mr", "ta", "gu", "kn", "ml", "pa", "or",
+    "en",
+    "hi",
+    "bn",
+    "te",
+    "mr",
+    "ta",
+    "gu",
+    "kn",
+    "ml",
+    "pa",
+    "or",
 }
 
 
@@ -54,13 +66,21 @@ class GoogleTranslationProvider(BaseTranslationProvider):
         target_language: SupportedLanguage | str,
     ) -> str:
         """Translate text using official Google Translate API."""
-        source = source_language.value if isinstance(source_language, SupportedLanguage) else source_language
-        target = target_language.value if isinstance(target_language, SupportedLanguage) else target_language
+        source = (
+            source_language.value
+            if isinstance(source_language, SupportedLanguage)
+            else source_language
+        )
+        target = (
+            target_language.value
+            if isinstance(target_language, SupportedLanguage)
+            else target_language
+        )
 
         if not self.api_key:
             raise AuthenticationError(
                 self.provider_name,
-                "Google Translate API key not configured. Set GOOGLE_TRANSLATE_API_KEY environment variable."
+                "Google Translate API key not configured. Set GOOGLE_TRANSLATE_API_KEY environment variable.",
             )
 
         params = {
@@ -81,9 +101,7 @@ class GoogleTranslationProvider(BaseTranslationProvider):
                         self.provider_name, f"Invalid Google Translate API key (HTTP {resp.status})"
                     )
                 if resp.status >= 500:
-                    raise ProviderServerError(
-                        self.provider_name, f"Server error: {resp.status}"
-                    )
+                    raise ProviderServerError(self.provider_name, f"Server error: {resp.status}")
 
                 resp.raise_for_status()
                 data = await resp.json()
@@ -120,13 +138,21 @@ class GoogleTranslationProvider(BaseTranslationProvider):
         Google Translate batch API — one call for all segments.
         MUCH cheaper and faster than N individual calls.
         """
-        source = source_language.value if isinstance(source_language, SupportedLanguage) else source_language
-        target = target_language.value if isinstance(target_language, SupportedLanguage) else target_language
+        source = (
+            source_language.value
+            if isinstance(source_language, SupportedLanguage)
+            else source_language
+        )
+        target = (
+            target_language.value
+            if isinstance(target_language, SupportedLanguage)
+            else target_language
+        )
 
         if not self.api_key:
             raise AuthenticationError(
                 self.provider_name,
-                "Google Translate API key not configured. Set GOOGLE_TRANSLATE_API_KEY environment variable."
+                "Google Translate API key not configured. Set GOOGLE_TRANSLATE_API_KEY environment variable.",
             )
 
         params = {
@@ -147,9 +173,7 @@ class GoogleTranslationProvider(BaseTranslationProvider):
                         self.provider_name, f"Invalid Google Translate API key (HTTP {resp.status})"
                     )
                 if resp.status >= 500:
-                    raise ProviderServerError(
-                        self.provider_name, f"Server error: {resp.status}"
-                    )
+                    raise ProviderServerError(self.provider_name, f"Server error: {resp.status}")
 
                 resp.raise_for_status()
                 data = await resp.json()

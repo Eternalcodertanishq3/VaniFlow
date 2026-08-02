@@ -8,11 +8,14 @@ What it checks per segment:
   3. Minimum size — did the TTS provider return garbage?
   4. Audio integrity — can pydub parse the bytes?
 """
-import io
+
 import asyncio
+import io
+
 import structlog
-from vaaniflow.qc.models import QCStatus, SegmentQCResult, PipelineQCResult, QCConfig
+
 from vaaniflow.models import AudioSegment
+from vaaniflow.qc.models import PipelineQCResult, QCConfig, QCStatus, SegmentQCResult
 
 log = structlog.get_logger(__name__)
 
@@ -86,9 +89,12 @@ class QualityController:
             status = QCStatus.FAIL
             should_retry = True
             return SegmentQCResult(
-                segment_index=segment.index, status=status,
-                silence_ratio=1.0, length_ratio=0.0,
-                issues=issues, should_retry=should_retry,
+                segment_index=segment.index,
+                status=status,
+                silence_ratio=1.0,
+                length_ratio=0.0,
+                issues=issues,
+                should_retry=should_retry,
             )
 
         # Check 2: Silence ratio using pydub
@@ -150,6 +156,7 @@ class QualityController:
         """Estimate duration from audio bytes."""
         try:
             from pydub import AudioSegment as PydubSeg
+
             audio = PydubSeg.from_file(io.BytesIO(audio_bytes))
             return float(len(audio))
         except Exception:

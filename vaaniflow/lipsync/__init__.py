@@ -11,11 +11,13 @@ Future: Integrates with Wav2Lip/SyncTalk for real-time lip movement generation.
 Pipeline integration point:
   After audio stitching (Stage 6), before final output delivery.
 """
+
 import json
-import structlog
+from dataclasses import asdict, dataclass
 from pathlib import Path
-from dataclasses import dataclass, asdict
 from typing import Optional
+
+import structlog
 
 from vaaniflow.models import AudioSegment
 
@@ -25,6 +27,7 @@ log = structlog.get_logger(__name__)
 @dataclass
 class LipSyncSegment:
     """A single segment's timing and metadata for lip-sync alignment."""
+
     index: int
     start_ms: float
     end_ms: float
@@ -44,6 +47,7 @@ class LipSyncManifest:
     a downstream video renderer needs to align lip movements
     with dubbed audio segments.
     """
+
     job_id: str
     source_language: str
     target_language: str
@@ -117,19 +121,21 @@ class LipSyncExporter:
             speaking_rate = None
             if emotions and seg.index in emotions:
                 emo = emotions[seg.index]
-                emotion_label = emo.label.value if hasattr(emo, 'label') else str(emo)
-                speaking_rate = emo.speaking_rate if hasattr(emo, 'speaking_rate') else None
+                emotion_label = emo.label.value if hasattr(emo, "label") else str(emo)
+                speaking_rate = emo.speaking_rate if hasattr(emo, "speaking_rate") else None
 
-            sync_segments.append(LipSyncSegment(
-                index=seg.index,
-                start_ms=seg.start_ms,
-                end_ms=seg.end_ms,
-                duration_ms=seg.duration_ms,
-                original_text=seg.original_text,
-                translated_text=seg.translated_text or "",
-                emotion_label=emotion_label,
-                speaking_rate=speaking_rate,
-            ))
+            sync_segments.append(
+                LipSyncSegment(
+                    index=seg.index,
+                    start_ms=seg.start_ms,
+                    end_ms=seg.end_ms,
+                    duration_ms=seg.duration_ms,
+                    original_text=seg.original_text,
+                    translated_text=seg.translated_text or "",
+                    emotion_label=emotion_label,
+                    speaking_rate=speaking_rate,
+                )
+            )
 
         manifest = LipSyncManifest(
             job_id=job_id,
@@ -146,6 +152,7 @@ class LipSyncExporter:
         manifest_path = self.output_dir / f"{job_id}_lipsync_manifest.json"
 
         import asyncio
+
         await asyncio.to_thread(self._write_manifest, manifest_path, manifest)
 
         log.info(

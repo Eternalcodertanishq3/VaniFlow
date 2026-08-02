@@ -2,19 +2,31 @@
 Whisper transcription provider using faster-whisper.
 Local inference — no API key needed.
 """
+
 import asyncio
 from pathlib import Path
+
 import structlog
 
-from vaaniflow.providers.transcription.base import BaseTranscriptionProvider
-from vaaniflow.models import TranscriptionResult, AudioSegment, TranscriptionProvider
-from vaaniflow.exceptions import TranscriptionError
 from vaaniflow.config import settings
+from vaaniflow.exceptions import TranscriptionError
+from vaaniflow.models import AudioSegment, TranscriptionProvider, TranscriptionResult
+from vaaniflow.providers.transcription.base import BaseTranscriptionProvider
 
 log = structlog.get_logger(__name__)
 
 WHISPER_SUPPORTED_LANGUAGES = {
-    "en", "hi", "bn", "te", "mr", "ta", "gu", "kn", "ml", "pa", "or",
+    "en",
+    "hi",
+    "bn",
+    "te",
+    "mr",
+    "ta",
+    "gu",
+    "kn",
+    "ml",
+    "pa",
+    "or",
 }
 
 
@@ -53,9 +65,7 @@ class WhisperProvider(BaseTranscriptionProvider):
     def supports_language(self, language_code: str) -> bool:
         return language_code in WHISPER_SUPPORTED_LANGUAGES
 
-    async def transcribe(
-        self, audio_path: Path, source_language: str
-    ) -> TranscriptionResult:
+    async def transcribe(self, audio_path: Path, source_language: str) -> TranscriptionResult:
         """
         Transcribe audio using faster-whisper.
         Runs in executor to avoid blocking the event loop.
@@ -74,9 +84,7 @@ class WhisperProvider(BaseTranscriptionProvider):
         except Exception as e:
             raise TranscriptionError(f"Whisper transcription failed: {e}")
 
-    def _transcribe_sync(
-        self, audio_path: Path, source_language: str
-    ) -> TranscriptionResult:
+    def _transcribe_sync(self, audio_path: Path, source_language: str) -> TranscriptionResult:
         """Synchronous transcription — runs in thread pool."""
         model = self._get_model()
 

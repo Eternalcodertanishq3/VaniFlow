@@ -3,17 +3,29 @@ gTTS (Google Text-to-Speech) free fallback provider.
 Always available — no API key required.
 Used as automatic fallback when primary TTS providers fail.
 """
+
 import asyncio
 import io
+
 import structlog
 
-from vaaniflow.providers.tts.base import BaseTTSProvider, TTSSynthesisRequest, TTSSynthesisResponse
 from vaaniflow.exceptions import TTSError
+from vaaniflow.providers.tts.base import BaseTTSProvider, TTSSynthesisRequest, TTSSynthesisResponse
 
 log = structlog.get_logger(__name__)
 
 GTTS_SUPPORTED_LANGUAGES = {
-    "en", "hi", "bn", "te", "mr", "ta", "gu", "kn", "ml", "pa", "or",
+    "en",
+    "hi",
+    "bn",
+    "te",
+    "mr",
+    "ta",
+    "gu",
+    "kn",
+    "ml",
+    "pa",
+    "or",
 }
 
 

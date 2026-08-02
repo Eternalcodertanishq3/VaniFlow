@@ -10,10 +10,12 @@ Technique: Spectral subtraction using scipy.
   3. Subtract speech spectrum to isolate ambient
   4. After dubbing: layer dubbed speech + original ambient
 """
+
 import asyncio
 import io
-import structlog
 from dataclasses import dataclass
+
+import structlog
 
 log = structlog.get_logger(__name__)
 
@@ -40,6 +42,7 @@ class AmbientAudioPreserver:
     def _check_scipy(self) -> bool:
         if self._scipy_available is None:
             import importlib.util
+
             scipy_spec = importlib.util.find_spec("scipy")
             numpy_spec = importlib.util.find_spec("numpy")
             self._scipy_available = scipy_spec is not None and numpy_spec is not None
@@ -79,7 +82,7 @@ class AmbientAudioPreserver:
         """Synchronous spectral subtraction."""
         import numpy as np
         from scipy.io import wavfile
-        from scipy.signal import stft, istft
+        from scipy.signal import istft, stft
 
         try:
             from pydub import AudioSegment as PydubSeg
@@ -117,7 +120,7 @@ class AmbientAudioPreserver:
             _, ambient_signal = istft(ambient_complex, fs=sr, nperseg=nperseg)
 
             # Compute ambient level
-            ambient_rms = float(np.sqrt(np.mean(ambient_signal ** 2)))
+            ambient_rms = float(np.sqrt(np.mean(ambient_signal**2)))
             ambient_db = 20 * np.log10(max(ambient_rms, 1e-10))
             has_significant = ambient_db > -40
 
@@ -172,7 +175,7 @@ class AmbientAudioPreserver:
 
         # Match lengths
         if len(ambient) > len(dubbed):
-            ambient = ambient[:len(dubbed)]
+            ambient = ambient[: len(dubbed)]
         elif len(ambient) < len(dubbed):
             silence = PydubSeg.silent(duration=len(dubbed) - len(ambient))
             ambient = ambient + silence

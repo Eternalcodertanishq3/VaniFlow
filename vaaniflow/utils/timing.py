@@ -2,6 +2,7 @@
 Segment timing utilities for adjusting TTS audio
 to match original segment durations.
 """
+
 import structlog
 
 log = structlog.get_logger(__name__)

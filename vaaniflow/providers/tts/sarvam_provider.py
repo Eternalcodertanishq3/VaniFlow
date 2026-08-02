@@ -2,41 +2,53 @@
 Sarvam AI TTS Provider implementation.
 Primary provider for Indian language text-to-speech.
 """
+
 import asyncio
+
 import aiohttp
 import structlog
 
-from vaaniflow.providers.tts.base import BaseTTSProvider, TTSSynthesisRequest, TTSSynthesisResponse
+from vaaniflow.config import settings
 from vaaniflow.exceptions import (
-    RateLimitError,
     AuthenticationError,
     ProviderServerError,
     ProviderTimeoutError,
+    RateLimitError,
     TTSError,
 )
-from vaaniflow.utils.retry import retry_on_rate_limit, retry_on_server_error, no_retry_on_auth_error
-from vaaniflow.config import settings
+from vaaniflow.providers.tts.base import BaseTTSProvider, TTSSynthesisRequest, TTSSynthesisResponse
+from vaaniflow.utils.retry import no_retry_on_auth_error, retry_on_rate_limit, retry_on_server_error
 
 log = structlog.get_logger(__name__)
 
 SARVAM_TTS_URL = "https://api.sarvam.ai/text-to-speech"
 SARVAM_SUPPORTED_LANGUAGES = {
-    "hi", "bn", "te", "mr", "ta", "gu", "kn", "ml", "pa", "or", "en",
+    "hi",
+    "bn",
+    "te",
+    "mr",
+    "ta",
+    "gu",
+    "kn",
+    "ml",
+    "pa",
+    "or",
+    "en",
 }
 
 # Default Sarvam voice per language — diversified across available voices
 SARVAM_DEFAULT_VOICES = {
-    "hi": "arvind",   # Male Hindi
-    "bn": "arvind",   # Male Bengali
-    "te": "meera",    # Female Telugu
-    "mr": "arvind",   # Male Marathi
-    "ta": "meera",    # Female Tamil
-    "gu": "arvind",   # Male Gujarati
-    "kn": "meera",    # Female Kannada
-    "ml": "meera",    # Female Malayalam
-    "pa": "arvind",   # Male Punjabi
-    "or": "arvind",   # Male Odia
-    "en": "arvind",   # Male English
+    "hi": "arvind",  # Male Hindi
+    "bn": "arvind",  # Male Bengali
+    "te": "meera",  # Female Telugu
+    "mr": "arvind",  # Male Marathi
+    "ta": "meera",  # Female Tamil
+    "gu": "arvind",  # Male Gujarati
+    "kn": "meera",  # Female Kannada
+    "ml": "meera",  # Female Malayalam
+    "pa": "arvind",  # Male Punjabi
+    "or": "arvind",  # Male Odia
+    "en": "arvind",  # Male English
 }
 
 # Sarvam language code mapping
@@ -123,11 +135,14 @@ class SarvamTTSProvider(BaseTTSProvider):
                     raise TTSError("No audio returned from Sarvam TTS")
 
                 import base64
+
                 audio_bytes = base64.b64decode(audios[0])
 
                 return TTSSynthesisResponse(
                     audio_bytes=audio_bytes,
-                    duration_ms=len(audio_bytes) / 44100 * 1000,  # 22050Hz × 2 bytes = 44100 bytes/sec
+                    duration_ms=len(audio_bytes)
+                    / 44100
+                    * 1000,  # 22050Hz × 2 bytes = 44100 bytes/sec
                     provider=self.provider_name,
                 )
 

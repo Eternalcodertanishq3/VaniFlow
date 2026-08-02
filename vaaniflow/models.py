@@ -2,15 +2,18 @@
 All data models using Pydantic v2.
 Sarvam wants typed Python — every input/output/config must be typed.
 """
-from enum import Enum
-from typing import Optional, Literal
-from pydantic import BaseModel, Field, field_validator
-from datetime import datetime, timezone
+
 import uuid
+from datetime import datetime, timezone
+from enum import Enum
+from typing import Literal, Optional
+
+from pydantic import BaseModel, Field, field_validator
 
 
 class SupportedLanguage(str, Enum):
     """10+ Indian languages supported by VaaniFlow."""
+
     AUTO = "auto"
     HINDI = "hi"
     BENGALI = "bn"
@@ -56,6 +59,7 @@ class DubbingJobConfig(BaseModel):
     Configuration for a single dubbing job.
     Pydantic v2 with full validation.
     """
+
     source_language: SupportedLanguage = SupportedLanguage.AUTO
     target_language: SupportedLanguage
     tts_provider: TTSProvider = TTSProvider.SARVAM
@@ -64,8 +68,12 @@ class DubbingJobConfig(BaseModel):
     preserve_timing: bool = True
     preserve_ambient: bool = True
     voice_id: Optional[str] = None
-    speaker_gender: Literal["Male", "Female"] = Field(default="Male", description="Speaker gender for Sarvam translation (Male/Female)")
-    translation_mode: Literal["formal", "informal"] = Field(default="formal", description="Translation mode (formal/informal)")
+    speaker_gender: Literal["Male", "Female"] = Field(
+        default="Male", description="Speaker gender for Sarvam translation (Male/Female)"
+    )
+    translation_mode: Literal["formal", "informal"] = Field(
+        default="formal", description="Translation mode (formal/informal)"
+    )
     loudness: float = Field(default=1.5, ge=0.5, le=3.0, description="TTS loudness multiplier")
     max_retries: int = Field(default=3, ge=1, le=5)
     timeout_seconds: int = Field(default=30, ge=5, le=120)
@@ -84,6 +92,7 @@ class DubbingJobConfig(BaseModel):
 
 class AudioSegment(BaseModel):
     """A single transcribed/translated audio segment with timing."""
+
     index: int
     start_ms: float
     end_ms: float
@@ -97,6 +106,7 @@ class AudioSegment(BaseModel):
 
 class TranscriptionResult(BaseModel):
     """Output from transcription provider."""
+
     segments: list[AudioSegment]
     source_language: str
     total_duration_ms: float
@@ -105,6 +115,7 @@ class TranscriptionResult(BaseModel):
 
 class TranslationResult(BaseModel):
     """Output from translation provider."""
+
     segments: list[AudioSegment]
     source_language: SupportedLanguage
     target_language: SupportedLanguage
@@ -114,6 +125,7 @@ class TranslationResult(BaseModel):
 
 class TTSResult(BaseModel):
     """Output from TTS provider."""
+
     segments: list[AudioSegment]
     provider_used: TTSProvider
     total_audio_bytes: int
@@ -121,6 +133,7 @@ class TTSResult(BaseModel):
 
 class DubbingJob(BaseModel):
     """Full dubbing job state — stored in Redis."""
+
     job_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     status: JobStatus = JobStatus.PENDING
     config: DubbingJobConfig
@@ -133,14 +146,21 @@ class DubbingJob(BaseModel):
 
 class DubbingJobRequest(BaseModel):
     """API request to create a dubbing job."""
+
     target_language: SupportedLanguage
     source_language: SupportedLanguage = SupportedLanguage.ENGLISH
     tts_provider: TTSProvider = TTSProvider.SARVAM
     voice_id: Optional[str] = None
-    speaker_gender: Literal["Male", "Female"] = Field(default="Male", description="Speaker gender (Male/Female)")
-    translation_mode: Literal["formal", "informal"] = Field(default="formal", description="Translation mode (formal/informal)")
+    speaker_gender: Literal["Male", "Female"] = Field(
+        default="Male", description="Speaker gender (Male/Female)"
+    )
+    translation_mode: Literal["formal", "informal"] = Field(
+        default="formal", description="Translation mode (formal/informal)"
+    )
     loudness: float = Field(default=1.5, ge=0.5, le=3.0, description="TTS loudness")
-    preserve_ambient: bool = Field(default=True, description="Preserve background music/ambient audio")
+    preserve_ambient: bool = Field(
+        default=True, description="Preserve background music/ambient audio"
+    )
 
     def to_config(self) -> DubbingJobConfig:
         """Convert API request to internal job config."""
@@ -158,6 +178,7 @@ class DubbingJobRequest(BaseModel):
 
 class DubbingJobResponse(BaseModel):
     """API response for job creation/status."""
+
     job_id: str
     status: JobStatus
     progress_pct: float
