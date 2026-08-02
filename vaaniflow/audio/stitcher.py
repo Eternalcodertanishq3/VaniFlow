@@ -178,6 +178,35 @@ class AudioStitcher:
         except Exception as e:
             raise AudioProcessingError(f"Audio stitching failed ({type(e).__name__}): {e}")
 
+    async def merge_video_and_audio(
+        self, original_video_path: Path, dubbed_audio_path: Path, job_id: str
+    ) -> Path:
+        """Combine original video stream with new dubbed audio track into a video file."""
+        output_video_path = self.output_dir / f"dubbed_video_{job_id}{original_video_path.suffix}"
+        ffmpeg_path = _resolve_ffmpeg()
+        if not ffmpeg_path or not original_video_path.exists():
+            return dubbed_audio_path
+
+        def _run_merge():
+            cmd = [
+                ffmpeg_path, "-y",
+                "-i", str(original_video_path),
+                "-i", str(dubbed_audio_path),
+                "-map", "0:v:0",
+                "-map", "1:a:0",
+                "-c:v", "copy",
+                "-c:a", "aac",
+                "-shortest",
+                str(output_video_path)
+            ]
+            res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=120)
+            if res.returncode == 0 and output_video_path.exists():
+                log.info("video_audio_merged", output=str(output_video_path))
+                return output_video_path
+            return dubbed_audio_path
+
+        return await asyncio.to_thread(_run_merge)
+
     async def _get_duration(self, file_path: Path) -> float:
         """Get audio file duration using ffprobe."""
         ffprobe_path = _resolve_ffprobe()

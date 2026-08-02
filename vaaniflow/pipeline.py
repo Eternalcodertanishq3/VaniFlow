@@ -221,6 +221,12 @@ class VaaniFlowPipeline:
                     output_path.write_bytes(remixed)
                     log.info("ambient_remixed")
 
+            # Stage 6.6: If input was a video file, multiplex video stream + new dubbed audio track
+            if input_path.suffix.lower() in {".mp4", ".webm", ".mkv", ".avi", ".mov"}:
+                output_path = await self.stitcher.merge_video_and_audio(
+                    input_path, output_path, job.job_id
+                )
+
             # Stage 6.7: Subtitle generation
             if settings.subtitle_generation_enabled:
                 with PIPELINE_STAGE_DURATION.labels("subtitle_generate").time():
