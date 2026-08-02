@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VaaniFlow — Dubbing Demo</title>
+<title>VaaniFlow — Multilingual Dubbing</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -18,7 +18,7 @@
 
   .clay-card {
     width: 100%;
-    max-width: 520px;
+    max-width: 540px;
     background: #FAF9F5;
     border-radius: 28px;
     box-shadow:
@@ -27,6 +27,7 @@
       0 24px 48px -12px rgba(20,18,12,0.10),
       inset 0 1px 0 rgba(255,255,255,0.6);
     padding: 36px;
+    position: relative;
   }
 
   .brand-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
@@ -71,28 +72,72 @@
     margin-bottom: 20px; font-size: 13px; color: #3A372E; font-weight: 500;
   }
   .file-chip.show { display: flex; }
-  .file-chip i { color: #4F46E5; font-size: 18px; }
 
   .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
-  .field { margin-bottom: 0; }
+  .field { margin-bottom: 0; position: relative; }
   .field label {
     display: flex; justify-content: space-between; align-items: center;
     font-size: 11.5px; font-weight: 600; color: #9A9384;
     text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px;
   }
   .field label span.val { color: #4F46E5; font-weight: 700; text-transform: none; }
-  .claySelect, .clayInput {
+
+  /* Custom Claymorphic Dropdown */
+  .custom-dropdown {
+    position: relative;
+    user-select: none;
+  }
+  .dropdown-trigger {
     width: 100%; padding: 12px 14px; border-radius: 16px; background: #F2F0E9;
     box-shadow: inset 0 2px 4px rgba(20,18,12,0.06), inset 0 -1px 0 rgba(255,255,255,0.5);
-    border: none; font-size: 14px; color: #1C1A14; font-weight: 500; cursor: pointer;
-    appearance: none; -webkit-appearance: none;
+    border: none; font-size: 13.5px; color: #1C1A14; font-weight: 500; cursor: pointer;
+    display: flex; align-items: center; justify-content: space-between;
+    transition: box-shadow .2s;
   }
-  .claySelect {
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8'><path d='M1 1l5 5 5-5' stroke='%23938C7C' stroke-width='1.6' fill='none' stroke-linecap='round'/></svg>");
-    background-repeat: no-repeat; background-position: right 14px center;
+  .dropdown-trigger:hover {
+    box-shadow: inset 0 2px 4px rgba(20,18,12,0.06), 0 0 0 2px rgba(79,70,229,0.2);
   }
-  .clayInput { cursor: text; }
-  .claySelect:focus, .clayInput:focus {
+  .dropdown-trigger .arrow {
+    font-size: 10px; color: #938C7C; transition: transform .2s ease;
+  }
+  .custom-dropdown.open .dropdown-trigger .arrow {
+    transform: rotate(180deg);
+  }
+  .dropdown-menu {
+    position: absolute; top: calc(100% + 6px); left: 0; right: 0;
+    background: #FAF9F5; border-radius: 18px;
+    box-shadow: 0 10px 30px rgba(20,18,12,0.15), 0 0 0 1px rgba(20,18,12,0.06), inset 0 1px 0 rgba(255,255,255,0.8);
+    padding: 6px; z-index: 100; max-height: 220px; overflow-y: auto;
+    display: none; opacity: 0; transform: translateY(-4px);
+    transition: opacity .2s ease, transform .2s ease;
+  }
+  .custom-dropdown.open .dropdown-menu {
+    display: block; opacity: 1; transform: translateY(0);
+  }
+  .dropdown-option {
+    padding: 10px 12px; border-radius: 12px; font-size: 13px; color: #3A372E;
+    font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: space-between;
+    transition: background .15s, color .15s;
+  }
+  .dropdown-option:hover {
+    background: #F2F0E9; color: #1C1A14;
+  }
+  .dropdown-option.selected {
+    background: #EEECFA; color: #4F46E5; font-weight: 600;
+  }
+  .dropdown-option .opt-badge {
+    font-size: 10px; padding: 2px 6px; border-radius: 6px; background: #E5E2D9; color: #6C6659; font-weight: 600;
+  }
+  .dropdown-option.selected .opt-badge {
+    background: #4F46E5; color: #fff;
+  }
+
+  .clayInput {
+    width: 100%; padding: 12px 14px; border-radius: 16px; background: #F2F0E9;
+    box-shadow: inset 0 2px 4px rgba(20,18,12,0.06), inset 0 -1px 0 rgba(255,255,255,0.5);
+    border: none; font-size: 13.5px; color: #1C1A14; font-weight: 500; cursor: text;
+  }
+  .clayInput:focus {
     outline: none;
     box-shadow: inset 0 2px 4px rgba(20,18,12,0.06), 0 0 0 2px rgba(79,70,229,0.3);
   }
@@ -229,26 +274,25 @@
     <div class="field-grid">
       <div class="field">
         <label>target language</label>
-        <select class="claySelect" id="targetLang">
-          <option value="hi">Hindi</option>
-          <option value="bn">Bengali</option>
-          <option value="te">Telugu</option>
-          <option value="mr">Marathi</option>
-          <option value="ta">Tamil</option>
-          <option value="gu">Gujarati</option>
-          <option value="kn">Kannada</option>
-          <option value="ml">Malayalam</option>
-          <option value="pa">Punjabi</option>
-          <option value="or">Odia</option>
-        </select>
+        <div class="custom-dropdown" id="dropdownTargetLang">
+          <div class="dropdown-trigger">
+            <span class="trigger-label">Hindi</span>
+            <span class="arrow">▼</span>
+          </div>
+          <div class="dropdown-menu"></div>
+          <input type="hidden" id="targetLang" value="hi">
+        </div>
       </div>
       <div class="field">
         <label>tts provider</label>
-        <select class="claySelect" id="ttsProvider">
-          <option value="sarvam">Sarvam AI</option>
-          <option value="elevenlabs">ElevenLabs</option>
-          <option value="gtts">gTTS (free)</option>
-        </select>
+        <div class="custom-dropdown" id="dropdownTtsProvider">
+          <div class="dropdown-trigger">
+            <span class="trigger-label">Sarvam AI</span>
+            <span class="arrow">▼</span>
+          </div>
+          <div class="dropdown-menu"></div>
+          <input type="hidden" id="ttsProvider" value="sarvam">
+        </div>
       </div>
     </div>
 
@@ -268,30 +312,39 @@
       <div class="field-grid">
         <div class="field">
           <label>speaker gender</label>
-          <select class="claySelect" id="speakerGender">
-            <option value="Male">Male</option>
-            <option value="Female">Female</option>
-          </select>
+          <div class="custom-dropdown" id="dropdownSpeakerGender">
+            <div class="dropdown-trigger">
+              <span class="trigger-label">Male</span>
+              <span class="arrow">▼</span>
+            </div>
+            <div class="dropdown-menu"></div>
+            <input type="hidden" id="speakerGender" value="Male">
+          </div>
         </div>
         <div class="field">
           <label>translation mode</label>
-          <select class="claySelect" id="translationMode">
-            <option value="formal">Formal</option>
-            <option value="informal">Informal</option>
-          </select>
+          <div class="custom-dropdown" id="dropdownTranslationMode">
+            <div class="dropdown-trigger">
+              <span class="trigger-label">Formal</span>
+              <span class="arrow">▼</span>
+            </div>
+            <div class="dropdown-menu"></div>
+            <input type="hidden" id="translationMode" value="formal">
+          </div>
         </div>
       </div>
 
       <div class="field-grid">
         <div class="field">
-          <label>voice ID (optional)</label>
-          <select class="claySelect" id="voiceId">
-            <option value="">Default (Auto)</option>
-            <option value="arvind">arvind (Male)</option>
-            <option value="meera">meera (Female)</option>
-            <option value="pooja">pooja (Female)</option>
-            <option value="amol">amol (Male)</option>
-          </select>
+          <label>voice model</label>
+          <div class="custom-dropdown" id="dropdownVoiceId">
+            <div class="dropdown-trigger">
+              <span class="trigger-label">Auto (Default)</span>
+              <span class="arrow">▼</span>
+            </div>
+            <div class="dropdown-menu"></div>
+            <input type="hidden" id="voiceId" value="">
+          </div>
         </div>
         <div class="field">
           <label>API Key (if required)</label>
@@ -330,7 +383,6 @@
 </div>
 
 <script>
-// Determine API Base URL dynamically
 const API_BASE = window.location.origin.includes("http") && !window.location.origin.includes("file://")
   ? (window.location.port ? `${window.location.protocol}//${window.location.hostname}:8000` : "")
   : "http://localhost:8000";
@@ -345,6 +397,147 @@ const STAGE_LABELS = {
   failed: "Failed",
 };
 
+// Custom Dropdown System Component
+function initCustomDropdown(containerId, options, onChange) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  const trigger = container.querySelector('.dropdown-trigger');
+  const triggerLabel = container.querySelector('.trigger-label');
+  const menu = container.querySelector('.dropdown-menu');
+  const hiddenInput = container.querySelector('input[type="hidden"]');
+
+  function renderOptions(opts) {
+    menu.innerHTML = '';
+    opts.forEach(opt => {
+      const item = document.createElement('div');
+      item.className = 'dropdown-option' + (opt.value === hiddenInput.value ? ' selected' : '');
+      item.innerHTML = `<span>${opt.label}</span>${opt.badge ? `<span class="opt-badge">${opt.badge}</span>` : ''}`;
+      item.addEventListener('click', (e) => {
+        e.stopPropagation();
+        hiddenInput.value = opt.value;
+        triggerLabel.textContent = opt.label;
+        container.querySelectorAll('.dropdown-option').forEach(el => el.classList.remove('selected'));
+        item.classList.add('selected');
+        container.classList.remove('open');
+        if (onChange) onChange(opt.value, opt);
+      });
+      menu.appendChild(item);
+    });
+
+    // Set initial label
+    const initialOpt = opts.find(o => o.value === hiddenInput.value) || opts[0];
+    if (initialOpt) {
+      triggerLabel.textContent = initialOpt.label;
+    }
+  }
+
+  renderOptions(options);
+
+  trigger.addEventListener('click', (e) => {
+    e.stopPropagation();
+    // Close other dropdowns
+    document.querySelectorAll('.custom-dropdown').forEach(d => {
+      if (d !== container) d.classList.remove('open');
+    });
+    container.classList.toggle('open');
+  });
+
+  return { renderOptions, setValue: (val, label) => { hiddenInput.value = val; triggerLabel.textContent = label; } };
+}
+
+// Close dropdowns on outside click
+document.addEventListener('click', () => {
+  document.querySelectorAll('.custom-dropdown').forEach(d => d.classList.remove('open'));
+});
+
+// Dropdown Definitions
+const targetLangOpts = [
+  { value: "hi", label: "Hindi" },
+  { value: "bn", label: "Bengali" },
+  { value: "te", label: "Telugu" },
+  { value: "mr", label: "Marathi" },
+  { value: "ta", label: "Tamil" },
+  { value: "gu", label: "Gujarati" },
+  { value: "kn", label: "Kannada" },
+  { value: "ml", label: "Malayalam" },
+  { value: "pa", label: "Punjabi" },
+  { value: "or", label: "Odia" }
+];
+
+const ttsProviderOpts = [
+  { value: "sarvam", label: "Sarvam AI", badge: "Neural" },
+  { value: "elevenlabs", label: "ElevenLabs", badge: "HD" },
+  { value: "gtts", label: "gTTS (free)", badge: "Free" }
+];
+
+const genderOpts = [
+  { value: "Male", label: "Male" },
+  { value: "Female", label: "Female" }
+];
+
+const modeOpts = [
+  { value: "formal", label: "Formal" },
+  { value: "informal", label: "Informal" }
+];
+
+// Initialize Dropdowns
+initCustomDropdown("dropdownTargetLang", targetLangOpts);
+initCustomDropdown("dropdownTranslationMode", modeOpts);
+
+let voiceDropdownCtrl = null;
+
+async function loadVoices(provider, gender) {
+  try {
+    const res = await fetch(`${API_BASE}/voices/?provider=${provider}&gender=${gender}`);
+    if (!res.ok) throw new Error("Failed to fetch voices");
+    const data = await res.json();
+    
+    const voiceOpts = [{ value: "", label: "Auto (Default)" }];
+    (data.voices || []).forEach(v => {
+      voiceOpts.push({
+        value: v.id,
+        label: `${v.name} (${v.gender})`,
+        badge: v.id === "arvind" || v.id === "meera" ? "Popular" : undefined
+      });
+    });
+
+    if (voiceDropdownCtrl) {
+      voiceDropdownCtrl.renderOptions(voiceOpts);
+    }
+  } catch (e) {
+    console.warn("Could not fetch voices dynamically:", e);
+    // Fallback static list
+    const fallbackOpts = [
+      { value: "", label: "Auto (Default)" },
+      { value: "arvind", label: "Arvind (Male)" },
+      { value: "amartya", label: "Amartya (Male)" },
+      { value: "ratan", label: "Ratan (Male)" },
+      { value: "meera", label: "Meera (Female)" },
+      { value: "kavya", label: "Kavya (Female)" },
+      { value: "anvita", label: "Anvita (Female)" }
+    ];
+    if (voiceDropdownCtrl) voiceDropdownCtrl.renderOptions(fallbackOpts);
+  }
+}
+
+// Inter-dependent dropdown triggers
+initCustomDropdown("dropdownTtsProvider", ttsProviderOpts, (prov) => {
+  const gender = document.getElementById("speakerGender").value;
+  loadVoices(prov, gender);
+});
+
+initCustomDropdown("dropdownSpeakerGender", genderOpts, (gender) => {
+  const prov = document.getElementById("ttsProvider").value;
+  loadVoices(prov, gender);
+});
+
+voiceDropdownCtrl = initCustomDropdown("dropdownVoiceId", [{ value: "", label: "Auto (Default)" }]);
+
+// Load voices initially
+loadVoices("sarvam", "Male");
+
+// File Dropzone Handling
 const dropzone = document.getElementById("dropzone");
 const fileInput = document.getElementById("fileInput");
 const fileChip = document.getElementById("fileChip");
@@ -373,13 +566,11 @@ let selectedFile = null;
 let pollTimer = null;
 let currentJobId = null;
 
-// Toggle Advanced Settings Panel
 advToggle.addEventListener("click", () => {
   const isShow = advPanel.classList.toggle("show");
   advArrow.textContent = isShow ? "▲" : "▼";
 });
 
-// Update Loudness display
 loudnessSlider.addEventListener("input", (e) => {
   loudnessVal.textContent = `${parseFloat(e.target.value).toFixed(1)}x`;
 });
