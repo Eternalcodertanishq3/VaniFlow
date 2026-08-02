@@ -78,14 +78,25 @@ async def validate_upload(file: UploadFile) -> bytes:
             detail=f"Unsupported content type '{content_type}'. Expected audio or video file.",
         )
 
-    # Read and check file size
-    content = await file.read()
+    # Stream file in 1MB chunks to check size limit efficiently before accumulating memory
+    chunks = []
+    total_size = 0
     max_upload_bytes = get_max_upload_bytes()
-    if len(content) > max_upload_bytes:
-        raise HTTPException(
-            status_code=413,
-            detail=f"File too large ({len(content) / 1024 / 1024:.1f}MB). Maximum: {settings.max_upload_size_mb}MB",
-        )
+    chunk_size = 1024 * 1024  # 1MB chunk
+
+    while True:
+        chunk = await file.read(chunk_size)
+        if not chunk:
+            break
+        total_size += len(chunk)
+        if total_size > max_upload_bytes:
+            raise HTTPException(
+                status_code=413,
+                detail=f"File too large ({total_size / 1024 / 1024:.1f}MB). Maximum: {settings.max_upload_size_mb}MB",
+            )
+        chunks.append(chunk)
+
+    content = b"".join(chunks)
 
     if len(content) == 0:
         raise HTTPException(status_code=400, detail="Uploaded file is empty")

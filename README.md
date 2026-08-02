@@ -359,7 +359,7 @@ JSON-structured logging with `contextvars` means every log event in a pipeline r
 ## 🧪 Running Tests
 
 ```bash
-# All tests (151 tests)
+# All tests (170 tests)
 pytest -v
 
 # Unit tests only
@@ -388,7 +388,11 @@ pytest --cov=vaaniflow --cov=api -v
 | Code-Switch Normalizer | 17 | Hinglish/Tanglish detection, marking, phrase mapping |
 | Cost Tracker | 10 | Cache hit rates, USD savings, provider breakdown |
 | Lip-Sync Exporter | 6 | Manifest creation, JSON structure, emotion metadata |
-| Phase 1 (providers, cache, retry, pipeline, models) | 47 | Full provider + duration math + infrastructure coverage |
+| Voices Catalog API | 3 | List all voices, filter by provider, filter by provider+gender |
+| Audio Extractor | 3 | ffmpeg resolution, nonexistent file error, mocked extraction |
+| Audio Normalizer | 3 | Volume normalization, sample rate conversion, file checks |
+| Audio Stitcher | 2 | Empty segments, segments with audio stitching |
+| Phase 1 (providers, cache, retry, pipeline, models) | 56 | Full provider + duration math + infrastructure coverage |
 
 ---
 
@@ -423,7 +427,7 @@ VaaniFlow/
 │   ├── main.py                        # App + lifespan + middleware pipeline
 │   ├── routes/                        # Jobs, health, metrics, stats endpoints (with DELETE /jobs/{id})
 │   └── middleware/                    # Logging, Auth & Upload Validation middleware
-├── tests/                             # 151 unit + integration tests
+├── tests/                             # 170 unit + integration tests
 ├── docker/                            # Dockerfile + compose
 ├── pyproject.toml
 └── README.md
