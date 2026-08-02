@@ -3,12 +3,18 @@ Audio normalization utilities.
 Volume leveling and sample rate conversion.
 """
 import asyncio
+import shutil
+import subprocess
 from pathlib import Path
 import structlog
 
 from vaaniflow.exceptions import AudioProcessingError
 
 log = structlog.get_logger(__name__)
+
+
+def _resolve_ffmpeg() -> str | None:
+    return shutil.which("ffmpeg")
 
 
 class AudioNormalizer:
@@ -40,10 +46,13 @@ class AudioNormalizer:
         if output_path is None:
             output_path = input_path.with_suffix(".normalized.wav")
 
+        ffmpeg_path = _resolve_ffmpeg()
+        if not ffmpeg_path:
+            raise AudioProcessingError("ffmpeg not found in PATH")
+
         try:
-            # Two-pass loudness normalization using ffmpeg loudnorm filter
             cmd = [
-                "ffmpeg",
+                ffmpeg_path,
                 "-i", str(input_path),
                 "-af", f"loudnorm=I={target_lufs}:TP=-1.5:LRA=11",
                 "-ar", "16000",
@@ -52,18 +61,13 @@ class AudioNormalizer:
                 str(output_path),
             ]
 
-            process = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            stdout, stderr = await process.communicate()
+            def _run():
+                res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60)
+                if res.returncode != 0:
+                    err = res.stderr.decode(errors="replace") if res.stderr else "Unknown error"
+                    raise AudioProcessingError(f"Volume normalization failed: {err[:500]}")
 
-            if process.returncode != 0:
-                error_msg = stderr.decode() if stderr else "Unknown error"
-                raise AudioProcessingError(
-                    f"Volume normalization failed: {error_msg}"
-                )
+            await asyncio.to_thread(_run)
 
             log.info(
                 "volume_normalized",
@@ -77,7 +81,7 @@ class AudioNormalizer:
         except AudioProcessingError:
             raise
         except Exception as e:
-            raise AudioProcessingError(f"Volume normalization failed: {e}")
+            raise AudioProcessingError(f"Volume normalization failed ({type(e).__name__}): {e}")
 
     @staticmethod
     async def convert_sample_rate(
@@ -99,9 +103,13 @@ class AudioNormalizer:
         if output_path is None:
             output_path = input_path.with_suffix(f".{target_rate}hz.wav")
 
+        ffmpeg_path = _resolve_ffmpeg()
+        if not ffmpeg_path:
+            raise AudioProcessingError("ffmpeg not found in PATH")
+
         try:
             cmd = [
-                "ffmpeg",
+                ffmpeg_path,
                 "-i", str(input_path),
                 "-ar", str(target_rate),
                 "-ac", "1",
@@ -109,15 +117,12 @@ class AudioNormalizer:
                 str(output_path),
             ]
 
-            process = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            await process.communicate()
+            def _run():
+                res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60)
+                if res.returncode != 0:
+                    raise AudioProcessingError("Sample rate conversion failed")
 
-            if process.returncode != 0:
-                raise AudioProcessingError("Sample rate conversion failed")
+            await asyncio.to_thread(_run)
 
             log.info(
                 "sample_rate_converted",
@@ -131,4 +136,4 @@ class AudioNormalizer:
         except AudioProcessingError:
             raise
         except Exception as e:
-            raise AudioProcessingError(f"Sample rate conversion failed: {e}")
+            raise AudioProcessingError(f"Sample rate conversion failed ({type(e).__name__}): {e}")

@@ -73,21 +73,29 @@ class SubtitleGenerator:
         return vtt_path
 
     async def burn_subtitles(self, video_path: Path, srt_path: Path, output_path: Path) -> Path:
+        import shutil
+        import subprocess
+
         if not video_path.exists():
             raise AudioProcessingError(f"Video file not found: {video_path}")
         if not srt_path.exists():
             raise AudioProcessingError(f"Subtitle file not found: {srt_path}")
 
+        ffmpeg_path = shutil.which("ffmpeg")
+        if not ffmpeg_path:
+            raise AudioProcessingError("ffmpeg not found in PATH")
+
         srt_escaped = str(srt_path).replace("\\", "/").replace(":", "\\:")
-        cmd = ["ffmpeg", "-y", "-i", str(video_path), "-vf", f"subtitles='{srt_escaped}'",
+        cmd = [ffmpeg_path, "-y", "-i", str(video_path), "-vf", f"subtitles='{srt_escaped}'",
                "-c:a", "copy", str(output_path)]
 
-        process = await asyncio.create_subprocess_exec(
-            *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
-        )
-        stdout, stderr = await process.communicate()
-        if process.returncode != 0:
-            raise AudioProcessingError(f"Subtitle burn-in failed: {stderr.decode()}")
+        def _run():
+            res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=120)
+            if res.returncode != 0:
+                err = res.stderr.decode(errors="replace") if res.stderr else "Unknown error"
+                raise AudioProcessingError(f"Subtitle burn-in failed: {err[:500]}")
+
+        await asyncio.to_thread(_run)
 
         log.info("subtitles_burned", output=str(output_path))
         return output_path

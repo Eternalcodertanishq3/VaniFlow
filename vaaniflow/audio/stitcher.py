@@ -3,8 +3,10 @@ Audio stitching — reassemble TTS segments with original timing.
 Uses native FFmpeg filtergraphs for highly efficient stream processing.
 """
 import os
+import shutil
 import tempfile
 import asyncio
+import subprocess
 from pathlib import Path
 import structlog
 
@@ -13,6 +15,14 @@ from vaaniflow.exceptions import AudioProcessingError
 from vaaniflow.config import settings
 
 log = structlog.get_logger(__name__)
+
+
+def _resolve_ffmpeg() -> str | None:
+    return shutil.which("ffmpeg")
+
+
+def _resolve_ffprobe() -> str | None:
+    return shutil.which("ffprobe")
 
 
 class AudioStitcher:
@@ -51,6 +61,10 @@ class AudioStitcher:
         )
 
         output_path = self.output_dir / f"dubbed_{job_id}.wav"
+
+        ffmpeg_path = _resolve_ffmpeg()
+        if not ffmpeg_path:
+            raise AudioProcessingError("ffmpeg not found in PATH")
 
         try:
             # Use a temporary directory to store individual segments for ffmpeg
@@ -123,8 +137,8 @@ class AudioStitcher:
 
                 filtergraph = ";".join(filter_parts)
 
-                # Construct FFmpeg command
-                cmd = ["ffmpeg", "-y"]
+                # Construct FFmpeg command using full resolved executable path
+                cmd = [ffmpeg_path, "-y"]
                 for inp in inputs:
                     cmd.extend(["-i", inp])
 
@@ -138,17 +152,14 @@ class AudioStitcher:
 
                 log.debug("ffmpeg_stitching_cmd", command=" ".join(cmd))
 
-                # Execute FFmpeg subprocess
-                process = await asyncio.create_subprocess_exec(
-                    *cmd,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE
-                )
-                stdout, stderr = await process.communicate()
+                def _run_stitch():
+                    res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=120)
+                    if res.returncode != 0:
+                        err = res.stderr.decode(errors="replace") if res.stderr else "Unknown error"
+                        log.error("ffmpeg_stitching_failed", stderr=err[:500])
+                        raise AudioProcessingError(f"FFmpeg stitching failed: {err[:500]}")
 
-                if process.returncode != 0:
-                    log.error("ffmpeg_stitching_failed", stderr=stderr.decode())
-                    raise AudioProcessingError(f"FFmpeg stitching failed: {stderr.decode()}")
+                await asyncio.to_thread(_run_stitch)
 
                 # Output validation
                 if not output_path.exists():
@@ -165,21 +176,26 @@ class AudioStitcher:
         except AudioProcessingError:
             raise
         except Exception as e:
-            raise AudioProcessingError(f"Audio stitching failed: {e}")
+            raise AudioProcessingError(f"Audio stitching failed ({type(e).__name__}): {e}")
 
     async def _get_duration(self, file_path: Path) -> float:
         """Get audio file duration using ffprobe."""
-        cmd = [
-            "ffprobe", "-v", "error", "-show_entries",
-            "format=duration", "-of",
-            "default=noprint_wrappers=1:nokey=1", str(file_path)
-        ]
-        process = await asyncio.create_subprocess_exec(
-            *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
-        )
-        stdout, _ = await process.communicate()
-        try:
-            return float(stdout.decode().strip())
-        except ValueError:
-            # Fallback if ffprobe fails
+        ffprobe_path = _resolve_ffprobe()
+        if not ffprobe_path:
             return 0.0
+
+        def _run_ffprobe():
+            cmd = [
+                ffprobe_path, "-v", "error", "-show_entries",
+                "format=duration", "-of",
+                "default=noprint_wrappers=1:nokey=1", str(file_path)
+            ]
+            res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
+            if res.returncode == 0:
+                try:
+                    return float(res.stdout.decode().strip())
+                except ValueError:
+                    pass
+            return 0.0
+
+        return await asyncio.to_thread(_run_ffprobe)
