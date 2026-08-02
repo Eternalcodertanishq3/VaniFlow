@@ -37,14 +37,10 @@ class AudioExtractor:
     Outputs normalized WAV for downstream processing.
     """
 
-    def __init__(self):
-        self._has_ffmpeg = _ffmpeg_available()
-        if not self._has_ffmpeg:
-            log.warning(
-                "ffmpeg_not_found",
-                hint="Install ffmpeg for full format support. "
-                     "Falling back to pydub/wave for audio files.",
-            )
+    @property
+    def _has_ffmpeg(self) -> bool:
+        """Check ffmpeg availability dynamically (not cached at init)."""
+        return _ffmpeg_available()
 
     async def extract(self, input_path: Path) -> Path:
         """
