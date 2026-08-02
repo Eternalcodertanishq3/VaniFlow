@@ -214,7 +214,7 @@ class VaaniFlowPipeline:
             log.info("stitching_completed", output_path=str(output_path))
 
             # Stage 6.5: Ambient remix (Phase 2)
-            if settings.ambient_separation_enabled and ambient_bytes:
+            if (settings.ambient_separation_enabled and job.config.preserve_ambient) and ambient_bytes:
                 with PIPELINE_STAGE_DURATION.labels("ambient_remix").time():
                     dubbed_bytes = output_path.read_bytes()
                     remixed = await self.ambient_preserver.remix(dubbed_bytes, ambient_bytes)

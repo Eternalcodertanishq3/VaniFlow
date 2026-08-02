@@ -35,6 +35,7 @@ async def create_dubbing_job(
     speaker_gender: str = Form(default="Male"),
     translation_mode: str = Form(default="formal"),
     loudness: float = Form(default=1.5, ge=0.5, le=3.0),
+    preserve_ambient: bool = Form(default=True),
 ):
     """
     Create a new dubbing job.
@@ -62,6 +63,7 @@ async def create_dubbing_job(
         speaker_gender=speaker_gender,
         translation_mode=translation_mode,
         loudness=loudness,
+        preserve_ambient=preserve_ambient,
     )
     job = DubbingJob(config=config)
     await job_repo.save(job)

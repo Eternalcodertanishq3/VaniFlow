@@ -62,6 +62,7 @@ class DubbingJobConfig(BaseModel):
     translation_provider: TranslationProvider = TranslationProvider.SARVAM
     transcription_provider: TranscriptionProvider = TranscriptionProvider.WHISPER
     preserve_timing: bool = True
+    preserve_ambient: bool = True
     voice_id: Optional[str] = None
     speaker_gender: Literal["Male", "Female"] = Field(default="Male", description="Speaker gender for Sarvam translation (Male/Female)")
     translation_mode: Literal["formal", "informal"] = Field(default="formal", description="Translation mode (formal/informal)")
@@ -139,6 +140,7 @@ class DubbingJobRequest(BaseModel):
     speaker_gender: Literal["Male", "Female"] = Field(default="Male", description="Speaker gender (Male/Female)")
     translation_mode: Literal["formal", "informal"] = Field(default="formal", description="Translation mode (formal/informal)")
     loudness: float = Field(default=1.5, ge=0.5, le=3.0, description="TTS loudness")
+    preserve_ambient: bool = Field(default=True, description="Preserve background music/ambient audio")
 
     def to_config(self) -> DubbingJobConfig:
         """Convert API request to internal job config."""
@@ -150,6 +152,7 @@ class DubbingJobRequest(BaseModel):
             speaker_gender=self.speaker_gender,
             translation_mode=self.translation_mode,
             loudness=self.loudness,
+            preserve_ambient=self.preserve_ambient,
         )
 
 

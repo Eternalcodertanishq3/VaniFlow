@@ -321,6 +321,13 @@
         <input type="range" class="clayRange" id="loudness" min="0.5" max="3.0" step="0.1" value="1.5">
       </div>
 
+      <div class="field" style="margin-bottom: 14px;">
+        <label style="display:flex; align-items:center; justify-content:space-between; cursor:pointer; text-transform:none; font-size:13px; color:#1C1A14; font-weight:500;">
+          <span>🎵 Preserve Background Music / Ambiance</span>
+          <input type="checkbox" id="preserveAmbient" checked style="width:18px; height:18px; accent-color:#4F46E5; cursor:pointer;">
+        </label>
+      </div>
+
       <div class="field-grid">
         <div class="field">
           <label>speaker gender</label>
@@ -669,6 +676,7 @@ form.addEventListener("submit", async (e) => {
   formData.append("speaker_gender", document.getElementById("speakerGender").value);
   formData.append("translation_mode", document.getElementById("translationMode").value);
   formData.append("loudness", loudnessSlider.value);
+  formData.append("preserve_ambient", document.getElementById("preserveAmbient").checked);
   
   const voice = document.getElementById("voiceId").value;
   if (voice) {
