@@ -1,6 +1,6 @@
 """
 Google Translate API provider.
-Uses the REST API via aiohttp with proper error handling.
+Uses official Google Cloud Translation REST API via aiohttp with proper error handling.
 """
 import asyncio
 import aiohttp
@@ -47,44 +47,21 @@ class GoogleTranslationProvider(BaseTranslationProvider):
     @no_retry_on_auth_error
     @retry_on_rate_limit(max_attempts=3)
     @retry_on_server_error(max_attempts=2)
-    async def _free_web_translate(self, text: str, source: str, target: str) -> str:
-        """Fallback to free web endpoint when Google API key is missing/invalid."""
-        import urllib.parse
-        import html
-        import re
-
-        url = f"https://translate.google.com/m?sl={source}&tl={target}&q={urllib.parse.quote(text)}"
-        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
-        session = await self._get_session()
-        try:
-            async with session.get(url, headers=headers) as resp:
-                resp.raise_for_status()
-                raw_html = await resp.text()
-                match = re.search(r'class="result-container">(.*?)</div>', raw_html)
-                if match:
-                    translated = html.unescape(match.group(1)).strip()
-                    if translated:
-                        return translated
-                raise TranslationError("Failed to parse free web translation")
-        except Exception as e:
-            log.warning("free_google_translate_failed", error=str(e))
-            raise TranslationError(f"Free Google translate failed: {e}")
-
-    @no_retry_on_auth_error
-    @retry_on_rate_limit(max_attempts=3)
-    @retry_on_server_error(max_attempts=2)
     async def translate(
         self,
         text: str,
         source_language: SupportedLanguage | str,
         target_language: SupportedLanguage | str,
     ) -> str:
-        """Translate text using Google Translate API."""
+        """Translate text using official Google Translate API."""
         source = source_language.value if isinstance(source_language, SupportedLanguage) else source_language
         target = target_language.value if isinstance(target_language, SupportedLanguage) else target_language
 
         if not self.api_key:
-            return await self._free_web_translate(text, source, target)
+            raise AuthenticationError(
+                self.provider_name,
+                "Google Translate API key not configured. Set GOOGLE_TRANSLATE_API_KEY environment variable."
+            )
 
         params = {
             "key": self.api_key,
@@ -100,8 +77,9 @@ class GoogleTranslationProvider(BaseTranslationProvider):
                 if resp.status == 429:
                     raise RateLimitError(self.provider_name, "Rate limited")
                 if resp.status in (401, 403):
-                    log.warning("google_api_key_invalid_using_free_fallback", status=resp.status)
-                    return await self._free_web_translate(text, source, target)
+                    raise AuthenticationError(
+                        self.provider_name, f"Invalid Google Translate API key (HTTP {resp.status})"
+                    )
                 if resp.status >= 500:
                     raise ProviderServerError(
                         self.provider_name, f"Server error: {resp.status}"
@@ -146,9 +124,11 @@ class GoogleTranslationProvider(BaseTranslationProvider):
         target = target_language.value if isinstance(target_language, SupportedLanguage) else target_language
 
         if not self.api_key:
-            return list(await asyncio.gather(*[self._free_web_translate(t, source, target) for t in texts]))
+            raise AuthenticationError(
+                self.provider_name,
+                "Google Translate API key not configured. Set GOOGLE_TRANSLATE_API_KEY environment variable."
+            )
 
-        # Build params with multiple 'q' values
         params = {
             "key": self.api_key,
             "target": target,
@@ -158,14 +138,14 @@ class GoogleTranslationProvider(BaseTranslationProvider):
 
         session = await self._get_session()
         try:
-            # aiohttp handles list params correctly
             params["q"] = texts
             async with session.post(GOOGLE_TRANSLATE_URL, params=params) as resp:
                 if resp.status == 429:
                     raise RateLimitError(self.provider_name, "Rate limited")
                 if resp.status in (401, 403):
-                    log.warning("google_api_key_invalid_using_free_fallback", status=resp.status)
-                    return list(await asyncio.gather(*[self._free_web_translate(t, source, target) for t in texts]))
+                    raise AuthenticationError(
+                        self.provider_name, f"Invalid Google Translate API key (HTTP {resp.status})"
+                    )
                 if resp.status >= 500:
                     raise ProviderServerError(
                         self.provider_name, f"Server error: {resp.status}"
@@ -183,6 +163,8 @@ class GoogleTranslationProvider(BaseTranslationProvider):
             )
 
     async def health_check(self) -> bool:
+        if not self.api_key:
+            return False
         try:
             result = await self.translate("hello", "en", "hi")
             return bool(result)

@@ -97,7 +97,7 @@ class SarvamTTSProvider(BaseTTSProvider):
             "loudness": request.loudness,
             "speech_sample_rate": 22050,
             "enable_preprocessing": True,
-            "model": "bulbul:v1",
+            "model": settings.sarvam_tts_model,
         }
 
         session = await self._get_session()

@@ -3,7 +3,7 @@ All data models using Pydantic v2.
 Sarvam wants typed Python — every input/output/config must be typed.
 """
 from enum import Enum
-from typing import Optional
+from typing import Optional, Literal
 from pydantic import BaseModel, Field, field_validator
 from datetime import datetime, timezone
 import uuid
@@ -63,8 +63,8 @@ class DubbingJobConfig(BaseModel):
     transcription_provider: TranscriptionProvider = TranscriptionProvider.WHISPER
     preserve_timing: bool = True
     voice_id: Optional[str] = None
-    speaker_gender: str = Field(default="Male", description="Speaker gender for Sarvam translation (Male/Female)")
-    translation_mode: str = Field(default="formal", description="Translation mode (formal/informal)")
+    speaker_gender: Literal["Male", "Female"] = Field(default="Male", description="Speaker gender for Sarvam translation (Male/Female)")
+    translation_mode: Literal["formal", "informal"] = Field(default="formal", description="Translation mode (formal/informal)")
     loudness: float = Field(default=1.5, ge=0.5, le=3.0, description="TTS loudness multiplier")
     max_retries: int = Field(default=3, ge=1, le=5)
     timeout_seconds: int = Field(default=30, ge=5, le=120)
@@ -136,8 +136,8 @@ class DubbingJobRequest(BaseModel):
     source_language: SupportedLanguage = SupportedLanguage.ENGLISH
     tts_provider: TTSProvider = TTSProvider.SARVAM
     voice_id: Optional[str] = None
-    speaker_gender: str = Field(default="Male", description="Speaker gender (Male/Female)")
-    translation_mode: str = Field(default="formal", description="Translation mode (formal/informal)")
+    speaker_gender: Literal["Male", "Female"] = Field(default="Male", description="Speaker gender (Male/Female)")
+    translation_mode: Literal["formal", "informal"] = Field(default="formal", description="Translation mode (formal/informal)")
     loudness: float = Field(default=1.5, ge=0.5, le=3.0, description="TTS loudness")
 
     def to_config(self) -> DubbingJobConfig:

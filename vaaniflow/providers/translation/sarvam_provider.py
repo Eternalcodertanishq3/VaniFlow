@@ -88,7 +88,7 @@ class SarvamTranslationProvider(BaseTranslationProvider):
             "target_language_code": target_sarvam,
             "speaker_gender": kwargs.get("speaker_gender", "Male"),
             "mode": kwargs.get("translation_mode", "formal"),
-            "model": "mayura:v1",
+            "model": settings.sarvam_translation_model,
             "enable_preprocessing": True,
         }
 

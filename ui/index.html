@@ -424,7 +424,15 @@ function initCustomDropdown(containerId, options, onChange) {
     opts.forEach(opt => {
       const item = document.createElement('div');
       item.className = 'dropdown-option' + (opt.value === hiddenInput.value ? ' selected' : '');
-      item.innerHTML = `<span>${opt.label}</span>${opt.badge ? `<span class="opt-badge">${opt.badge}</span>` : ''}`;
+      const labelSpan = document.createElement('span');
+      labelSpan.textContent = opt.label;
+      item.appendChild(labelSpan);
+      if (opt.badge) {
+        const badgeSpan = document.createElement('span');
+        badgeSpan.className = 'opt-badge';
+        badgeSpan.textContent = opt.badge;
+        item.appendChild(badgeSpan);
+      }
       item.addEventListener('click', (e) => {
         e.stopPropagation();
         hiddenInput.value = opt.value;

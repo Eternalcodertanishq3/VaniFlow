@@ -70,6 +70,10 @@ class Settings(BaseSettings):
         alias="ALLOWED_UPLOAD_FORMATS",
     )
 
+    # Sarvam Model Versions
+    sarvam_tts_model: str = Field(default="bulbul:v1", alias="SARVAM_TTS_MODEL")
+    sarvam_translation_model: str = Field(default="mayura:v1", alias="SARVAM_TRANSLATION_MODEL")
+
     model_config = {
         "env_file": ".env",
         "env_file_encoding": "utf-8",
