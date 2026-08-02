@@ -7,7 +7,6 @@ import asyncio
 import shutil
 import tempfile
 import wave
-import io
 from pathlib import Path
 import structlog
 
@@ -231,7 +230,6 @@ class AudioExtractor:
                 # Basic resampling: convert to target format
                 # For production quality, ffmpeg is strongly recommended
                 import struct
-                import array
 
                 # Convert to mono if stereo
                 if channels == 2 and sampwidth == 2:

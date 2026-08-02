@@ -2,7 +2,6 @@
 Async Redis cache for translation and TTS results.
 Reduces API costs by caching repeated translations.
 """
-import json
 from typing import Optional
 import structlog
 

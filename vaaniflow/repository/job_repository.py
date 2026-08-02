@@ -2,10 +2,9 @@
 Redis-backed job repository.
 Replaces in-memory dict — jobs survive server restarts.
 """
-import json
 from typing import Optional
 import structlog
-from vaaniflow.models import DubbingJob, JobStatus
+from vaaniflow.models import DubbingJob
 from vaaniflow.config import settings
 
 log = structlog.get_logger(__name__)

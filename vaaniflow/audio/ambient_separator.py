@@ -14,7 +14,6 @@ import asyncio
 import io
 import structlog
 from dataclasses import dataclass
-from typing import Optional
 
 log = structlog.get_logger(__name__)
 
@@ -40,16 +39,15 @@ class AmbientAudioPreserver:
 
     def _check_scipy(self) -> bool:
         if self._scipy_available is None:
-            try:
-                import scipy
-                import numpy
-                self._scipy_available = True
-            except ImportError:
+            import importlib.util
+            scipy_spec = importlib.util.find_spec("scipy")
+            numpy_spec = importlib.util.find_spec("numpy")
+            self._scipy_available = scipy_spec is not None and numpy_spec is not None
+            if not self._scipy_available:
                 log.warning(
                     "scipy_not_installed",
                     message="pip install scipy numpy for ambient separation",
                 )
-                self._scipy_available = False
         return self._scipy_available
 
     async def separate(self, audio_bytes: bytes) -> SeparationResult:

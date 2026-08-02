@@ -17,7 +17,6 @@ import asyncio
 import structlog
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
 import io
 
 log = structlog.get_logger(__name__)
@@ -73,16 +72,14 @@ class EmotionPreserver:
 
     def _check_librosa(self) -> bool:
         if self._librosa_available is None:
-            try:
-                import librosa
-                self._librosa_available = True
-            except ImportError:
+            import importlib.util
+            self._librosa_available = importlib.util.find_spec("librosa") is not None
+            if not self._librosa_available:
                 log.warning(
                     "librosa_not_installed",
                     message="pip install librosa for emotion detection",
                     fallback="using neutral emotion for all segments",
                 )
-                self._librosa_available = False
         return self._librosa_available
 
     async def detect(self, audio_bytes: bytes) -> EmotionResult:

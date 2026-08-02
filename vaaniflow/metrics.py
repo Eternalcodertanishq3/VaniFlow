@@ -5,7 +5,6 @@ The API route simply serves the Prometheus registry.
 """
 from prometheus_client import (
     Counter, Histogram, Gauge,
-    generate_latest, CONTENT_TYPE_LATEST, REGISTRY,
 )
 
 # Job lifecycle

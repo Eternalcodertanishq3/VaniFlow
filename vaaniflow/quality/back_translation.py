@@ -20,7 +20,6 @@ BLEU score interpretation for short segments:
 import asyncio
 import structlog
 from dataclasses import dataclass
-from typing import Optional
 
 from vaaniflow.quality.embedding_scorer import EmbeddingQualityScorer
 

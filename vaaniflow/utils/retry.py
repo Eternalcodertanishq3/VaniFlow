@@ -6,9 +6,7 @@ from server failures, add fallback logic"
 
 Each retry decorator handles a different failure type differently.
 """
-import asyncio
 from functools import wraps
-from typing import Callable, Type
 import structlog
 from tenacity import (
     retry,
@@ -18,7 +16,6 @@ from tenacity import (
     wait_fixed,
     before_sleep_log,
     RetryError,
-    after_log,
 )
 import logging
 

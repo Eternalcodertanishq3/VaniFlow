@@ -1,7 +1,6 @@
 """
 Health check endpoints — liveness, readiness, and dependency diagnostics.
 """
-import asyncio
 import shutil
 from fastapi import APIRouter
 import structlog
@@ -107,14 +106,12 @@ async def _check_redis() -> bool:
         await r.ping()
         await r.close()
         return True
-    except Exception:
+    except Exception as e:
+        log.debug("redis_health_check_failed", error=str(e))
         return False
 
 
 async def _check_whisper() -> bool:
     """Check if faster-whisper is importable."""
-    try:
-        import faster_whisper
-        return True
-    except ImportError:
-        return False
+    import importlib.util
+    return importlib.util.find_spec("faster_whisper") is not None
