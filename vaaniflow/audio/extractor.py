@@ -20,14 +20,14 @@ TARGET_SAMPLE_RATE = 16000
 TARGET_CHANNELS = 1
 
 
-def _ffmpeg_available() -> bool:
-    """Check if ffmpeg binary is on PATH."""
-    return shutil.which("ffmpeg") is not None
+def _resolve_ffmpeg() -> str | None:
+    """Resolve ffmpeg to its full path. Returns None if not found."""
+    return shutil.which("ffmpeg")
 
 
-def _ffprobe_available() -> bool:
-    """Check if ffprobe binary is on PATH."""
-    return shutil.which("ffprobe") is not None
+def _resolve_ffprobe() -> str | None:
+    """Resolve ffprobe to its full path. Returns None if not found."""
+    return shutil.which("ffprobe")
 
 
 class AudioExtractor:
@@ -40,7 +40,7 @@ class AudioExtractor:
     @property
     def _has_ffmpeg(self) -> bool:
         """Check ffmpeg availability dynamically (not cached at init)."""
-        return _ffmpeg_available()
+        return _resolve_ffmpeg() is not None
 
     async def extract(self, input_path: Path) -> Path:
         """
@@ -102,9 +102,13 @@ class AudioExtractor:
         """Extract audio using ffmpeg subprocess (preferred method)."""
         output_path = Path(tempfile.mktemp(suffix=".wav"))
 
-        try:
+        def _run_ffmpeg():
+            import subprocess
+            ffmpeg_path = _resolve_ffmpeg()
+            if not ffmpeg_path:
+                raise AudioProcessingError("ffmpeg not found in PATH")
             cmd = [
-                "ffmpeg",
+                ffmpeg_path,              # use full resolved path (Windows compat)
                 "-i", str(input_path),
                 "-vn",                    # no video
                 "-acodec", "pcm_s16le",   # 16-bit PCM
@@ -114,21 +118,26 @@ class AudioExtractor:
                 str(output_path),
             ]
 
-            process = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
+            result = subprocess.run(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=120,
             )
-            stdout, stderr = await process.communicate()
 
-            if process.returncode != 0:
-                error_msg = stderr.decode() if stderr else "Unknown ffmpeg error"
+            if result.returncode != 0:
+                error_msg = result.stderr.decode(errors="replace") if result.stderr else "Unknown ffmpeg error"
                 raise AudioProcessingError(
-                    f"ffmpeg extraction failed (code {process.returncode}): {error_msg}"
+                    f"ffmpeg extraction failed (code {result.returncode}): {error_msg[:500]}"
                 )
 
             if not output_path.exists() or output_path.stat().st_size == 0:
                 raise AudioProcessingError("ffmpeg produced empty output file")
+
+            return output_path
+
+        try:
+            output_path = await asyncio.to_thread(_run_ffmpeg)
 
             log.info(
                 "audio_extraction_completed",
@@ -145,7 +154,7 @@ class AudioExtractor:
                 "ffmpeg not found. Install: winget install ffmpeg"
             )
         except Exception as e:
-            raise AudioProcessingError(f"Audio extraction failed: {e}")
+            raise AudioProcessingError(f"Audio extraction failed ({type(e).__name__}): {e}")
 
     async def _extract_with_pydub(self, input_path: Path) -> Path:
         """
@@ -276,7 +285,7 @@ class AudioExtractor:
             return await self._get_wav_duration_ms(audio_path)
 
         # For other formats, try ffprobe
-        if _ffprobe_available():
+        if _resolve_ffprobe():
             return await self._get_duration_ffprobe(audio_path)
 
         # Last resort: try pydub
@@ -297,28 +306,34 @@ class AudioExtractor:
 
     async def _get_duration_ffprobe(self, audio_path: Path) -> float:
         """Get duration using ffprobe."""
-        try:
+        def _run():
+            import subprocess
+            ffprobe_path = _resolve_ffprobe()
+            if not ffprobe_path:
+                raise AudioProcessingError("ffprobe not found in PATH")
             cmd = [
-                "ffprobe",
+                ffprobe_path,             # use full resolved path (Windows compat)
                 "-v", "error",
                 "-show_entries", "format=duration",
                 "-of", "default=noprint_wrappers=1:nokey=1",
                 str(audio_path),
             ]
 
-            process = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
+            result = subprocess.run(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=30,
             )
-            stdout, stderr = await process.communicate()
 
-            if process.returncode != 0:
+            if result.returncode != 0:
                 raise AudioProcessingError("ffprobe failed")
 
-            duration_s = float(stdout.decode().strip())
+            duration_s = float(result.stdout.decode().strip())
             return duration_s * 1000
 
+        try:
+            return await asyncio.to_thread(_run)
         except (ValueError, AudioProcessingError) as e:
             raise AudioProcessingError(f"Failed to get audio duration: {e}")
 
