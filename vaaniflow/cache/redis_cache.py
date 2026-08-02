@@ -31,7 +31,7 @@ class TranslationCache:
                 self._redis = aioredis.from_url(
                     settings.redis_url,
                     decode_responses=True,
-                    socket_connect_timeout=5,
+                    socket_connect_timeout=1,
                 )
                 # Test connection
                 await self._redis.ping()

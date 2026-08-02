@@ -30,7 +30,7 @@ class DubbingJobRepository:
             try:
                 import redis.asyncio as aioredis
                 self._redis = aioredis.from_url(
-                    settings.redis_url, decode_responses=True, socket_connect_timeout=3
+                    settings.redis_url, decode_responses=True, socket_connect_timeout=1
                 )
                 await self._redis.ping()
             except Exception as e:

@@ -188,7 +188,12 @@ async def run_pipeline_task(job: DubbingJob, input_path: Path):
     try:
         output_path = await pipeline.run(job, input_path)
         job.output_path = str(output_path)
+        await job_repo.save(job)
     except Exception as e:
         log.error("background_task_failed", job_id=job.job_id, error=str(e))
+        job.status = JobStatus.FAILED
+        job.error_message = str(e)
+        await job_repo.save(job)
     finally:
         input_path.unlink(missing_ok=True)
+
