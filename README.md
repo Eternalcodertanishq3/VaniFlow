@@ -31,7 +31,7 @@ graph LR
     E5 --> F[QC Validation]
     F --> G[Audio Stitcher]
     G --> G2[🎵 Ambient Remix]
-    G2 --> H[🔊 Dubbed Audio]
+    G2 --> H[🔊 Dubbed Output]
 
     subgraph Transcription Providers
         C --> C1[faster-whisper Local]
@@ -66,29 +66,30 @@ graph LR
 
 ---
 
-## ✨ What Makes VaaniFlow Unique
+## ✨ What VaaniFlow Actually Does
 
-Most dubbing pipelines just translate words. **VaaniFlow preserves the soul of the original.**
+VaaniFlow is a **pipeline orchestration engine** — not just an API wrapper. It coordinates 9+ stages of audio/video processing, with each stage independently configurable, testable, and replaceable.
 
-| Feature | What It Does | Why It Matters |
-|---------|-------------|----------------|
-| 😊 **EmotionPreserver** | Detects pitch, energy, tempo from original audio → injects speaking rate + pitch into TTS | Dubbed audio *feels* the same — angry stays angry, sad stays sad |
-| 🔄 **BackTranslationQualityScorer** | Back-translates to source → dual-scores with BLEU + multilingual sentence-embedding cosine similarity → retries only if BOTH fail | Embedding similarity catches valid paraphrases BLEU wrongly penalizes; BLEU catches lexical/numeric errors embeddings might miss |
-| ✂️ **SmartSegmentBoundaryOptimizer** | Merges fragmented Whisper segments using spaCy sentence tokenization | "The quick brown fox" + "jumped over" → one segment = better translation |
-| 🗣️ **IndianNamePronunciationCorrector** | 60+ Indian names/places/brands → phonetic hints before TTS | "Bangalore" → "Baanga-lore" so TTS pronounces it correctly |
-| 🎵 **AmbientAudioPreserver** | Spectral subtraction separates background audio → re-layers after dubbing | Background music/ambient sounds survive the dubbing process |
+| Feature | What It Does | How It Works |
+|---------|-------------|--------------|
+| 🧠 **NeuralEmotionPreserver** | Detects emotion from original audio → adjusts TTS speaking rate, pitch, stability | Primary: wav2vec2 classifier (`ehcalabres/wav2vec2-lg-xlsr-en-speech-emotion-recognition`). Fallback: rule-based librosa pitch/energy/tempo analysis. Confidence-scaled — low-confidence predictions stay closer to neutral. |
+| 🔄 **BackTranslationQualityScorer** | Back-translates to source → dual-scores with BLEU + multilingual sentence-embedding cosine similarity | Catches hallucinations. If BLEU < 0.30, auto-retries with alternate provider. Embedding similarity catches valid paraphrases BLEU wrongly penalizes. |
+| ✂️ **SmartSegmentBoundaryOptimizer** | Merges fragmented Whisper segments using spaCy sentence tokenization | "The quick brown fox" + "jumped over" → one segment = better translation context |
+| 🗣️ **IndianNamePronunciationCorrector** | 60+ Indian names/places/brands → phonetic hints injected before TTS | "Bangalore" → "Baanga-lore" so TTS pronounces it correctly |
+| 🎵 **DemucsAmbientPreserver** | Separates background audio from speech → re-layers after dubbing | Primary: Demucs 4-stem neural separation (vocals/drums/bass/other). Fallback: scipy spectral subtraction. Background music survives dubbing. |
 | 🔀 **CodeSwitchNormalizer** | Detects English words in Indic text (Hinglish/Tanglish) → marks with `[EN:]` tags for TTS | "Bill print karo" reads naturally without breaking accent or pacing |
-| 🔒 **Upload & Auth Guard** | Enforces max file size limits (100MB), extension whitelist, content-type checks & optional static API key auth (`X-API-Key`) | Prevents OOM attacks, malicious file execution, and unauthorized endpoint access |
-| 🎛️ **Configurable Sarvam Pipeline** | Full control over Sarvam speaker gender (`Male`/`Female`), translation mode (`formal`/`informal`), and loudness (`0.5–3.0x`) | Dynamic voice/mode matching per job instead of static hardcoding |
-| 💰 **CostTracker** | Tracks API calls avoided via Redis cache → reports estimated USD savings at `/stats` | Enterprise clients see exactly how much money caching saves at scale |
-| 🎬 **LipSyncExporter** | Exports per-segment timing manifest for downstream Wav2Lip/SyncTalk renderers | Complete multi-modal architectural blueprint for visual dubbing |
+| 🎬 **LipSyncExporter** | Generates lip-synced video or exports timing manifest | Primary: Wav2Lip neural inference (if installed with checkpoint). Fallback: JSON timing manifest with per-segment emotion/rate metadata. |
+| 📝 **SubtitleGenerator** | Generates SRT and VTT subtitle files from translated segments | Uses existing pipeline segment timing — no extra processing needed |
+| 🔒 **Upload & Auth Guard** | Enforces file size limits (100MB), extension whitelist, content-type checks & optional API key auth | Prevents OOM attacks and unauthorized access. Health/metrics endpoints bypass auth. |
+| 🎛️ **Configurable Sarvam Pipeline** | Full control over speaker gender (`Male`/`Female`), translation mode (`formal`/`informal`), loudness (`0.5–3.0x`) | Passed per-job through the API, not hardcoded |
+| 💰 **CostTracker** | Tracks API calls avoided via Redis cache → reports estimated USD savings at `/stats` | Shows exactly how much money caching saves |
+| 📁 **Async I/O + Memory Guard** | Non-blocking file reads/writes with configurable size limit (default 500MB) | Uses `asyncio.to_thread()` so large file I/O doesn't block the event loop |
 
 ---
 
-
 ## ⚡ Quick Start
 
-### Using Docker (Recommended)
+### Using Docker
 
 ```bash
 # Clone and configure
@@ -110,8 +111,11 @@ python -m venv venv
 venv\Scripts\activate  # Windows
 # source venv/bin/activate  # Linux/Mac
 
-# Install dependencies (includes ML packages)
+# Install core dependencies
 pip install -e ".[dev]"
+
+# Optional: Install neural dependencies (for Demucs, wav2vec2 emotion detection)
+pip install -e ".[neural]"
 
 # Download spaCy model for boundary optimization
 python -m spacy download en_core_web_sm
@@ -125,6 +129,16 @@ uvicorn api.main:app --reload --port 8000
 - **Python 3.11+**
 - **ffmpeg** — required for audio extraction ([download](https://ffmpeg.org/download.html))
 - **Redis** — optional, falls back to in-memory for both cache and job store
+
+### Optional Neural Dependencies
+
+The neural features (Demucs source separation, wav2vec2 emotion detection) require PyTorch and related packages. Without them, VaaniFlow automatically falls back to the lighter alternatives:
+
+| Feature | With `[neural]` installed | Without (fallback) |
+|---------|--------------------------|---------------------|
+| Ambient separation | Demucs 4-stem neural separation | scipy spectral subtraction |
+| Emotion detection | wav2vec2 audio classifier | Rule-based librosa pitch/energy analysis |
+| Lip-sync video | Wav2Lip (requires separate checkpoint download) | JSON timing manifest only |
 
 ---
 
@@ -174,29 +188,20 @@ curl -H "X-API-Key: your_secret_api_key" http://localhost:8000/jobs/{job_id}
 curl -X DELETE -H "X-API-Key: your_secret_api_key" http://localhost:8000/jobs/{job_id}
 ```
 
-**Response (200 OK):**
-```json
-{
-  "job_id": "a1b2c3d4-...",
-  "status": "failed",
-  "message": "Job cancelled successfully"
-}
-```
-
-### Download Dubbed Audio
+### Download Dubbed Output
 
 ```bash
 curl -O -H "X-API-Key: your_secret_api_key" http://localhost:8000/jobs/{job_id}/download
 ```
 
-### Health & Observability (Auth Exempt)
+### Health & Observability (No Auth Required)
 
 ```bash
-# Health checks (No Auth Required)
+# Health checks
 curl http://localhost:8000/health/
 curl http://localhost:8000/health/ready
 
-# Prometheus metrics (No Auth Required)
+# Prometheus metrics
 curl http://localhost:8000/metrics
 
 # Cost optimization dashboard
@@ -226,45 +231,29 @@ curl -H "X-API-Key: your_secret_api_key" http://localhost:8000/stats
 
 ---
 
-## 🚀 Sarvam Integration Showcase
+## 🚀 Sarvam Integration
 
-VaaniFlow is designed to be a native showcase for **Sarvam AI**'s APIs, treating them as first-class citizens. By default, both the translation and TTS layers fall back directly to Sarvam with full support for configurable voice parameters.
-
-### Clean Abstraction Layer
-
-The pipeline interacts with Sarvam through our strictly typed provider interface, abstracting away network complexity, retry logic, and batching constraints:
-
-```python
-# vaaniflow/providers/translation/sarvam_provider.py
-async def translate_batch(
-    self, texts: list[str], source_lang: str, target_lang: str, **kwargs
-) -> list[str]:
-    """Concurrent execution of Sarvam's single-text translation API."""
-    async def _translate_single(text: str) -> str:
-        # Configurable gender and formal/informal mode
-        payload = {
-            "input": text,
-            "source_language_code": f"{source_lang}-IN",
-            "target_language_code": f"{target_lang}-IN",
-            "speaker_gender": kwargs.get("speaker_gender", "Male"),
-            "mode": kwargs.get("translation_mode", "formal"),
-        }
-        return await self._make_request(payload)
-
-    # Parallelize N network calls across the event loop for minimum latency
-    return await asyncio.gather(*[_translate_single(t) for t in texts])
-```
-
-### Full E2E Execution purely on Sarvam
-
-You don't need any other API keys. A simple `curl` command executes the entire pipeline using only Sarvam models:
+VaaniFlow treats **Sarvam AI** as a first-class provider. Both translation and TTS default to Sarvam, so you can run the entire pipeline with just one API key:
 
 ```bash
 curl -X POST http://localhost:8000/jobs/ \
   -F "file=@input_video.mp4" \
   -F "target_language=hi"
-# Because tts_provider and translation_provider default to "sarvam", 
-# the entire pipeline is powered natively by Sarvam AI.
+# tts_provider and translation_provider default to "sarvam"
+# The entire pipeline runs on Sarvam AI with zero extra config
+```
+
+The pipeline supports configurable speaker gender, translation mode, and loudness — passed per-job through the API, forwarded to Sarvam's payload:
+
+```python
+# vaaniflow/providers/translation/sarvam_provider.py
+payload = {
+    "input": text,
+    "source_language_code": f"{source_lang}-IN",
+    "target_language_code": f"{target_lang}-IN",
+    "speaker_gender": kwargs.get("speaker_gender", "Male"),
+    "mode": kwargs.get("translation_mode", "formal"),
+}
 ```
 
 ---
@@ -310,7 +299,7 @@ VaaniFlow exposes a `/metrics` endpoint compatible with **Prometheus + Grafana**
 ## 🔌 Provider Comparison
 
 | Feature | Sarvam AI | ElevenLabs | gTTS (Fallback) |
-|---------|-----------|------------|-----------------| 
+|---------|-----------|------------|-----------------|
 | **Quality** | ⭐⭐⭐⭐⭐ (Indian langs) | ⭐⭐⭐⭐⭐ (English) | ⭐⭐⭐ |
 | **Cost** | API key required | API key required | **Free** |
 | **Latency** | ~500ms | ~800ms | ~300ms |
@@ -330,29 +319,32 @@ Every TTS/Translation/Transcription provider implements the same interface. The 
 - **Easy testing** with mock providers
 
 ### Why Custom Exception Hierarchy?
-Sarvam's JD specifically asks to *"distinguish rate limits from auth errors from server failures."* Our hierarchy:
+Our exception hierarchy maps directly to retry strategies:
 - `RateLimitError` → retry with exponential backoff
 - `AuthenticationError` → fail immediately (config issue)
 - `ProviderServerError` → retry with fixed wait
 - `ProviderTimeoutError` → retry once, then fallback
 
 ### Why Batch Translation?
-Phase 1 called `translate()` N times (one per segment). Phase 2 calls `translate_batch()` **once** with all cache-miss texts. Google's API supports multi-`q` params, so N segments = 1 API call. Sarvam executes single-text API calls concurrently via `asyncio.gather` to avoid network I/O pileups.
+Single-text translation called N times = N network round-trips. Batch translation with Google's multi-`q` params = 1 API call for N segments. Sarvam (single-text API) executes concurrently via `asyncio.gather`.
 
 ### Why Back-Translation Quality Scoring?
-Translation APIs can hallucinate, especially with short segments or code-mixed text. Back-translating and computing BLEU catches these silently. If BLEU < 0.30, the segment is auto-retried with an alternate provider — no human intervention needed.
+Translation APIs can hallucinate, especially with short segments or code-mixed text. Back-translating and computing BLEU catches these silently. If BLEU < 0.30, the segment is auto-retried with an alternate provider.
 
-### Why Emotion Preservation?
-Standard dubbing loses emotional tone. We extract pitch (F0), energy (RMS), and tempo from the original audio using librosa, classify emotion with rule-based prosodic features, and inject corresponding `speaking_rate` and `pitch` into the TTS request. The result: angry speech stays angry, sad stays sad.
+### Why Neural + Fallback Architecture?
+The neural modules (Demucs, wav2vec2, Wav2Lip) are **optional**. Without PyTorch installed, VaaniFlow falls back to lighter alternatives (spectral subtraction, rule-based emotion detection, JSON manifests). This means:
+- **Dev/CI** runs without 2GB+ of neural model downloads
+- **Production** installs `pip install -e ".[neural]"` for best quality
+- No code changes needed — same pipeline, different quality tier
+
+### Why Async I/O with Memory Guard?
+The pipeline handles audio files that can be 100MB+. Blocking `.read_bytes()` calls freeze the event loop during file I/O. `asyncio.to_thread()` offloads file reads to the thread pool. The 500MB memory guard prevents OOM on unexpected inputs.
 
 ### Why Redis for Job Persistence?
-Phase 1 used `dict[str, DubbingJob]` — jobs vanished on server restart. Phase 2 uses `DubbingJobRepository` backed by Redis with 7-day TTL. Falls back to in-memory if Redis is unavailable, so dev experience stays frictionless.
-
-### Why Concurrent TTS?
-`asyncio.gather` synthesizes all segments in parallel instead of sequentially, giving **3–4x throughput** improvement for multi-segment audio.
+Jobs stored in `DubbingJobRepository` backed by Redis with 7-day TTL. Falls back to in-memory `dict` if Redis is unavailable, so dev experience stays frictionless.
 
 ### Why structlog?
-JSON-structured logging with `contextvars` means every log event in a pipeline run automatically includes `job_id` and `target_lang` — critical for debugging production systems with concurrent jobs.
+JSON-structured logging with `contextvars` means every log event in a pipeline run automatically includes `job_id` and `target_lang` — critical for debugging concurrent jobs in production.
 
 ---
 
@@ -374,8 +366,8 @@ pytest --cov=vaaniflow --cov=api -v
 
 **Test breakdown:**
 
-| Suite | Tests | Coverage |
-|-------|-------|----------|
+| Suite | Tests | What's Covered |
+|-------|-------|----------------|
 | API Authentication | 6 | Dev mode bypass, static API key validation, health/metrics bypass |
 | Upload Validation | 8 | File size limit, format whitelist, content-type, empty file checks |
 | QC Pipeline | 7 | Silence ratio, length ratio, min bytes, mixed segments |
@@ -392,7 +384,9 @@ pytest --cov=vaaniflow --cov=api -v
 | Audio Extractor | 3 | ffmpeg resolution, nonexistent file error, mocked extraction |
 | Audio Normalizer | 3 | Volume normalization, sample rate conversion, file checks |
 | Audio Stitcher | 2 | Empty segments, segments with audio stitching |
-| Phase 1 (providers, cache, retry, pipeline, models) | 56 | Full provider + duration math + infrastructure coverage |
+| Providers + Pipeline + Infrastructure | 56 | Provider contracts, duration math, cache, retry logic, models |
+
+All external API calls are mocked. Tests run without network access, API keys, or Redis.
 
 ---
 
@@ -401,35 +395,66 @@ pytest --cov=vaaniflow --cov=api -v
 ```
 VaaniFlow/
 ├── vaaniflow/                         # Core Python library
-│   ├── pipeline.py                    # Main orchestrator (12 stages)
+│   ├── pipeline.py                    # Main orchestrator (9 stages)
 │   ├── config.py                      # Pydantic settings + security + feature toggles
 │   ├── models.py                      # All data models (typed Pydantic v2)
 │   ├── exceptions.py                  # Custom exception hierarchy
 │   ├── metrics.py                     # Prometheus metric definitions
 │   ├── providers/                     # Provider abstraction layer
-│   │   ├── transcription/             # Whisper, AssemblyAI
-│   │   ├── translation/               # Google (batch), Sarvam (gender/mode support)
-│   │   └── tts/                       # ElevenLabs, Sarvam (loudness/voice support), gTTS
-│   ├── audio/                         # Extractor, stitcher, normalizer
-│   │   └── ambient_separator.py       # Spectral subtraction
+│   │   ├── transcription/             # Whisper (local), AssemblyAI (cloud)
+│   │   ├── translation/               # Google (batch), Sarvam (gender/mode)
+│   │   └── tts/                       # ElevenLabs, Sarvam (loudness/voice), gTTS
+│   ├── audio/                         # Audio processing
+│   │   ├── extractor.py               # ffmpeg video → audio extraction
+│   │   ├── stitcher.py                # Segment → final audio assembly
+│   │   ├── normalizer.py              # Volume/sample rate normalization
+│   │   ├── ambient_separator.py       # Spectral subtraction (fallback)
+│   │   └── demucs_separator.py        # Neural 4-stem separation (primary)
+│   ├── emotion/                       # Emotion detection
+│   │   ├── detector.py                # Rule-based librosa analysis (fallback)
+│   │   └── neural_detector.py         # wav2vec2 classifier (primary)
+│   ├── lipsync/                       # Lip-sync generation
+│   │   ├── __init__.py                # LipSyncExporter + JSON manifest
+│   │   └── wav2lip_generator.py       # Wav2Lip subprocess runner (primary)
 │   ├── cache/                         # Redis translation cache
-│   ├── cost/                          # Token & Cost optimization tracker
-│   ├── emotion/                       # EmotionPreserver (librosa)
-│   ├── lipsync/                       # Video lip-sync manifest exporter
+│   ├── cost/                          # API cost tracker + savings calculator
 │   ├── normalization/                 # Code-switching normalizer (Hinglish)
 │   ├── quality/                       # BackTranslationQualityScorer
 │   ├── segmentation/                  # SmartSegmentBoundaryOptimizer
 │   ├── pronunciation/                 # IndianNamePronunciationCorrector
 │   ├── qc/                            # Quality Control pipeline
-│   ├── repository/                    # Redis job persistence
-│   └── utils/                         # Retry, logging, timing
+│   ├── repository/                    # Redis job persistence (with in-memory fallback)
+│   ├── subtitles/                     # SRT/VTT subtitle generation
+│   └── utils/                         # Async I/O, retry, logging, timing
+│       ├── audio_io.py                # Non-blocking read/write + memory guard
+│       ├── retry.py                   # Exponential backoff + provider fallback
+│       ├── logging.py                 # Structlog config
+│       └── timing.py                  # Stage timing utilities
 ├── api/                               # FastAPI service
-│   ├── main.py                        # App + lifespan + middleware pipeline
-│   ├── routes/                        # Jobs, health, metrics, stats endpoints (with DELETE /jobs/{id})
-│   └── middleware/                    # Logging, Auth & Upload Validation middleware
+│   ├── main.py                        # App + lifespan + middleware stack
+│   ├── dependencies.py                # Dependency injection
+│   ├── routes/                        # REST endpoints
+│   │   ├── jobs.py                    # CRUD + download + cancel
+│   │   ├── health.py                  # Liveness/readiness probes
+│   │   ├── metrics.py                 # Prometheus scrape endpoint
+│   │   ├── stats.py                   # Cost dashboard
+│   │   └── voices.py                  # Voice catalog listing
+│   └── middleware/                    # Request processing
+│       ├── auth_middleware.py         # Optional API key auth
+│       ├── upload_validation.py       # File size/format/type checks
+│       └── logging_middleware.py      # Request/response logging
+├── ui/                                # Web UI (single-page HTML)
+│   └── index.html                     # Dubbing job creation interface
 ├── tests/                             # 170 unit + integration tests
-├── docker/                            # Dockerfile + compose
-├── pyproject.toml
+│   ├── conftest.py                    # Shared fixtures + mocks
+│   ├── unit/                          # 23 test files
+│   └── integration/                   # API + full pipeline tests
+├── docker/                            # Containerization
+│   ├── Dockerfile
+│   └── docker-compose.yml
+├── scripts/
+│   └── validate_emotion_classifier.py # Emotion classifier validation
+├── pyproject.toml                     # Build config + deps + ruff + pytest
 └── README.md
 ```
 
@@ -440,7 +465,7 @@ VaaniFlow/
 All features are **config-togglable** via environment variables:
 
 ```env
-# Phase 2: Feature toggles (all default to true)
+# Feature toggles (all default to true)
 EMOTION_DETECTION_ENABLED=true
 BACK_TRANSLATION_ENABLED=true
 BACK_TRANSLATION_THRESHOLD=0.30
@@ -451,105 +476,111 @@ QC_ENABLED=true
 QC_MAX_SILENCE_RATIO=0.7
 QC_MAX_LENGTH_RATIO=3.0
 
-# Phase 3: Showcase features
+# Showcase features
 CODE_SWITCH_NORMALIZATION_ENABLED=true   # Hinglish/Tanglish support
-LIPSYNC_EXPORT_ENABLED=false             # Lip-sync manifest export
+LIPSYNC_EXPORT_ENABLED=false             # Lip-sync (disabled by default)
+SUBTITLE_GENERATION_ENABLED=true         # SRT/VTT output
 
 # API Security & Upload Validation
-VAANIFLOW_API_KEY=your_secret_api_key    # Leave blank for dev mode
+VAANIFLOW_API_KEY=your_secret_api_key    # Leave blank for dev mode (no auth)
 CORS_ORIGINS=*
 MAX_UPLOAD_SIZE_MB=100
+MAX_AUDIO_BYTES=524288000                # 500MB memory guard
 ALLOWED_UPLOAD_FORMATS=.mp3,.mp4,.wav,.webm,.ogg,.m4a,.flac,.mkv
 
 # Provider API keys
 SARVAM_API_KEY=your-sarvam-key           # Only key needed for full E2E
-GOOGLE_API_KEY=your-google-key           # Optional
+GOOGLE_TRANSLATE_API_KEY=your-google-key # Optional
 ELEVENLABS_API_KEY=your-elevenlabs-key   # Optional
 
 # Infrastructure
-REDIS_URL=redis://localhost:6379/0
+REDIS_URL=redis://localhost:6379
+ENVIRONMENT=development
+LOG_LEVEL=INFO
 ```
 
 ---
 
 ## 📊 Performance Notes
 
-- **Batch translation**: 1 API call instead of N, with single-text providers falling back to concurrent execution via `asyncio.gather`
+- **Batch translation**: 1 API call instead of N (Google), concurrent `asyncio.gather` (Sarvam)
 - **Concurrent TTS**: All segments synthesized in parallel via `asyncio.gather`
-- **FFmpeg Stitching**: Native FFmpeg filtergraphs assemble audio, completely bypassing Python memory limits on long-form content
-- **Translation caching**: Redis-backed with 24h TTL — 40–60% cache hit rate
+- **FFmpeg stitching**: Native FFmpeg filtergraphs for audio assembly, bypasses Python memory limits
+- **Translation caching**: Redis-backed with 24h TTL — 40–60% cache hit rate on repeated content
 - **QC validation**: Catches bad TTS before stitching — prevents wasted compute
-- **Lazy model loading**: Whisper, spaCy, and librosa loaded on first use
-- **Non-blocking I/O**: Sync file writes offloaded to threadpool via `asyncio.to_thread`
+- **Lazy model loading**: Whisper, spaCy, librosa, wav2vec2, Demucs all loaded on first use
+- **Non-blocking I/O**: File reads/writes offloaded to thread pool via `asyncio.to_thread`
 - **Background processing**: Jobs return 202 immediately; pipeline runs async
+- **Memory guard**: 500MB configurable limit prevents OOM on large file uploads
 
 ---
 
-## 🛣️ Pipeline Flow (Phase 2)
+## 🛣️ Pipeline Flow
 
 ```
   ┌─────────────┐
   │  Input File  │
   └──────┬───────┘
          ▼
-  ┌──────────────┐     ┌──────────────────────┐
-  │   Extract    │────▶│  Ambient Separation   │  (spectral subtraction)
-  └──────────────┘     └──────────┬────────────┘
+  ┌──────────────┐     ┌───────────────────────┐
+  │   Extract    │────▶│  Ambient Separation    │  (Demucs neural / spectral fallback)
+  └──────────────┘     └──────────┬─────────────┘
                                   ▼
-                       ┌──────────────────────┐
-                       │     Transcribe       │  (Whisper / AssemblyAI)
-                       └──────────┬────────────┘
+                       ┌───────────────────────┐
+                       │     Transcribe        │  (Whisper / AssemblyAI)
+                       └──────────┬─────────────┘
                                   ▼
-                       ┌──────────────────────┐
-                       │ Boundary Optimization │  (spaCy sentence merge)
-                       └──────────┬────────────┘
+                       ┌───────────────────────┐
+                       │ Boundary Optimization  │  (spaCy sentence merge)
+                       └──────────┬─────────────┘
                                   ▼
-                       ┌──────────────────────┐
-                       │  Batch Translate     │  (1 API call + cache + gender/mode)
-                       └──────────┬────────────┘
+                       ┌───────────────────────┐
+                       │  Batch Translate       │  (1 API call + cache + gender/mode)
+                       └──────────┬─────────────┘
                                   ▼
-                       ┌──────────────────────┐
-                       │ Back-Translation QC  │  (BLEU ≥ 0.30?)
-                       └──────────┬────────────┘
+                       ┌───────────────────────┐
+                       │ Back-Translation QC    │  (BLEU + embedding ≥ 0.30?)
+                       └──────────┬─────────────┘
                                   ▼
-                       ┌──────────────────────┐
-                       │  Pronunciation Fix   │  (Indian name correction)
-                       └──────────┬────────────┘
+                       ┌───────────────────────┐
+                       │  Pronunciation Fix     │  (Indian name phonetic hints)
+                       └──────────┬─────────────┘
                                   ▼
-                       ┌──────────────────────┐
-                       │   TTS Synthesize     │  (emotion-aware + loudness params)
-                       └──────────┬────────────┘
+                       ┌───────────────────────┐
+                       │   TTS Synthesize       │  (emotion-aware + loudness)
+                       └──────────┬─────────────┘
                                   ▼
-                       ┌──────────────────────┐
-                       │    QC Validation     │  (silence, length, size)
-                       └──────────┬────────────┘
+                       ┌───────────────────────┐
+                       │    QC Validation       │  (silence, length, size)
+                       └──────────┬─────────────┘
                                   ▼
-                       ┌──────────────────────┐
-                       │   Stitch + Remix     │  (ambient re-layering)
-                       └──────────┬────────────┘
+                       ┌───────────────────────┐
+                       │  Stitch + Remix        │  (ambient re-layering)
+                       └──────────┬─────────────┘
                                   ▼
-                       ┌──────────────────────┐
-                       │   🔊 Dubbed Audio    │
-                       └──────────┬────────────┘
+                       ┌───────────────────────┐
+                       │  Video Mux + Subtitles │  (if input was video)
+                       └──────────┬─────────────┘
+                                  ▼
+                       ┌───────────────────────┐
+                       │   🔊 Dubbed Output     │
+                       └──────────────────────┘
 ```
 
 ---
 
-## ⚠️ Known Limitations & Next Steps
+## ⚠️ Known Limitations & Honest Assessment
 
-Built thoughtfully, but honestly scoped. Here's what's production-grade vs.
-v1/architectural placeholder:
-
-| Component | Current State | What "Real" Looks Like | Status |
+| Component | What's Built | What's Not | Status |
 |---|---|---|---|
-| **BackTranslationQualityScorer** | BLEU + multilingual embedding similarity (dual-metric) | Already upgraded past BLEU-only — embeddings catch valid paraphrases BLEU wrongly penalizes | ✅ Upgraded |
-| **Subtitle export** | SRT/VTT generation + optional burn-in | Production-ready, reuses existing segment timing | ✅ Built |
-| **Upload & Auth Security** | Optional static API key + size & format validation | OAuth2/JWT token validation with presigned S3 URLs | ✅ Enterprise-ready |
-| **EmotionPreserver** | Rule-based thresholds, validated against a small RAVDESS subset (see `scripts/validate_emotion_classifier.py`) | A trained classifier would generalize better; this is an honestly-measured v1 | ⚠️ Measured, not perfect |
-| **AmbientAudioPreserver** | scipy STFT spectral subtraction | Real source separation (Demucs/Spleeter) would isolate music/SFX more cleanly | ⚠️ Lightweight by design |
-| **LipSyncExporter** | Exports a JSON timing/emotion manifest only | No Wav2Lip/SyncTalk inference wired up — this is an integration point, not a working feature | 📋 Documented roadmap |
-
-I'd rather ship something honestly scoped than oversell a placeholder.
+| **NeuralEmotionPreserver** | wav2vec2 classifier with confidence-scaled TTS params. Falls back to rule-based if torch unavailable. | Not validated on large-scale diverse datasets beyond RAVDESS. Works best on English speech. | ✅ Built with fallback |
+| **DemucsAmbientPreserver** | Full Demucs 4-stem separation (htdemucs model). Falls back to scipy spectral subtraction. | Demucs is CPU-heavy (~10s per minute of audio). Requires `pip install -e ".[neural]"`. | ✅ Built with fallback |
+| **Wav2LipGenerator** | Subprocess runner for Wav2Lip inference, integrated into LipSyncExporter. | Requires separate Wav2Lip installation + checkpoint download (~170MB). Not bundled — runs as subprocess. | ✅ Built, needs external setup |
+| **LipSyncExporter** | Tries Wav2Lip first → falls back to JSON timing manifest. | JSON manifest requires downstream renderer to consume it. | ✅ Built with fallback |
+| **Multi-character dubbing** | Single voice per job. | No speaker diarization — would need pyannote.audio to assign different voices to different speakers. | ❌ Not built |
+| **Upload validation** | Static API key auth, file size/format/type checks. | No OAuth2, JWT, or presigned URL upload. | ✅ Functional, not enterprise SSO |
+| **BackTranslation** | BLEU + multilingual embedding dual scoring. | Embedding model is 118MB. No streaming — loads full model to memory. | ✅ Built |
+| **Subtitle export** | SRT and VTT generation from segment timing. | No subtitle burn-in to video (would need ffmpeg text overlay). | ✅ Built |
 
 ---
 
