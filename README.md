@@ -419,8 +419,7 @@ VaaniFlow/
 │   │   └── neural_detector.py         # Language-aware router (wav2vec2 + IndicWav2Vec)
 │   ├── lipsync/                       # Lip-sync generation
 │   │   ├── __init__.py                # LipSyncExporter + JSON manifest
-│   │   ├── musetalk_generator.py      # MuseTalk subprocess runner (MIT license)
-│   │   └── wav2lip_generator.py       # DEPRECATED (replaced by MuseTalk)
+│   │   └── musetalk_generator.py      # MuseTalk subprocess runner (MIT license)
 │   ├── cache/                         # Redis translation cache
 │   ├── cost/                          # API cost tracker + savings calculator
 │   ├── normalization/                 # Code-switching normalizer (Hinglish)
