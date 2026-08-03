@@ -1,17 +1,16 @@
 """
-Video Lip-Sync Pipeline Step — Modular Placeholder.
+Video Lip-Sync Pipeline Step.
 
-This module provides the architectural blueprint for visual lip synchronization.
-It exports audio segments with precise timestamps in a format consumable by
-downstream video renderers (Wav2Lip, video-retalking, SyncTalk).
+This module provides lip synchronization capabilities for VaaniFlow.
 
-Current status: Exports segment alignment manifest.
-Future: Integrates with Wav2Lip/SyncTalk for real-time lip movement generation.
+Primary: Wav2Lip neural lip-sync generation (if installed)
+Fallback: JSON timing manifest export (always available)
 
 Pipeline integration point:
   After audio stitching (Stage 6), before final output delivery.
 """
 
+import asyncio
 import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -19,6 +18,7 @@ from typing import Optional
 
 import structlog
 
+from vaaniflow.lipsync.wav2lip_generator import Wav2LipGenerator
 from vaaniflow.models import AudioSegment
 
 log = structlog.get_logger(__name__)
@@ -55,7 +55,7 @@ class LipSyncManifest:
     dubbed_audio_path: str
     original_video_path: Optional[str] = None
     segments: list[LipSyncSegment] = None
-    renderer: str = "wav2lip"  # Target renderer: wav2lip | video-retalking | synctalk
+    renderer: str = "wav2lip"
 
     def __post_init__(self):
         if self.segments is None:
@@ -67,27 +67,29 @@ class LipSyncManifest:
 
 class LipSyncExporter:
     """
-    Exports lip-sync alignment data for downstream video renderers.
+    Exports lip-sync data — either as a Wav2Lip-generated video
+    or a JSON timing manifest for downstream renderers.
 
-    This is the architectural extension point for multi-modal dubbing.
-    Currently exports a JSON manifest with segment timestamps.
-    Future versions will invoke Wav2Lip or SyncTalk directly.
+    Primary: Wav2Lip neural lip-sync video generation
+    Fallback: JSON manifest with segment timestamps
 
     Usage in pipeline:
         exporter = LipSyncExporter(enabled=True)
-        manifest_path = await exporter.export(
+        result = await exporter.export(
             segments=tts_result.segments,
             job_id=job.job_id,
             dubbed_audio_path=output_path,
             source_language="en",
             target_language="hi",
             total_duration_ms=transcription.total_duration_ms,
+            original_video_path=input_path,
         )
     """
 
     def __init__(self, enabled: bool = False, output_dir: str = "outputs"):
         self.enabled = enabled
         self.output_dir = Path(output_dir)
+        self.wav2lip = Wav2LipGenerator(enabled=enabled)
 
     async def export(
         self,
@@ -101,20 +103,73 @@ class LipSyncExporter:
         emotions: Optional[dict] = None,
     ) -> Optional[Path]:
         """
-        Export a lip-sync alignment manifest as JSON.
+        Export lip-sync output.
 
-        This manifest contains precise per-segment timestamps that a
-        downstream Wav2Lip or SyncTalk renderer can consume to generate
-        visually aligned dubbed video.
+        1. If Wav2Lip is available and input is a video:
+           → Generate lip-synced video
+        2. Always export JSON manifest as well
+           → For downstream renderers or manual inspection
 
         Returns:
-            Path to the exported manifest JSON, or None if disabled.
+            Path to generated lip-synced video or JSON manifest.
         """
         if not self.enabled:
             log.debug("lipsync_export_disabled")
             return None
 
-        # Build segment manifest entries
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+
+        # Build manifest segments
+        sync_segments = self._build_sync_segments(segments, emotions)
+
+        # Build manifest
+        manifest = LipSyncManifest(
+            job_id=job_id,
+            source_language=source_language,
+            target_language=target_language,
+            total_duration_ms=total_duration_ms,
+            dubbed_audio_path=str(dubbed_audio_path),
+            original_video_path=str(original_video_path) if original_video_path else None,
+            segments=sync_segments,
+        )
+
+        # Always export JSON manifest
+        manifest_path = await self._export_manifest(manifest)
+
+        # Try Wav2Lip if available and input is video
+        if (
+            self.wav2lip.is_available
+            and original_video_path
+            and original_video_path.suffix.lower() in {".mp4", ".webm", ".mkv", ".avi", ".mov"}
+        ):
+            lipsync_output = self.output_dir / f"{job_id}_lipsync.mp4"
+            result = await self.wav2lip.generate(
+                original_video_path=original_video_path,
+                dubbed_audio_path=dubbed_audio_path,
+                output_path=lipsync_output,
+            )
+            if result:
+                log.info(
+                    "lipsync_video_generated",
+                    job_id=job_id,
+                    path=str(result),
+                )
+                return result
+
+        log.info(
+            "lipsync_manifest_exported",
+            job_id=job_id,
+            segments=len(sync_segments),
+            path=str(manifest_path),
+        )
+        return manifest_path
+
+    def _build_sync_segments(
+        self,
+        segments: list[AudioSegment],
+        emotions: Optional[dict] = None,
+    ) -> list[LipSyncSegment]:
+        """Build LipSyncSegment list from pipeline AudioSegments."""
         sync_segments = []
         for seg in segments:
             emotion_label = None
@@ -136,31 +191,12 @@ class LipSyncExporter:
                     speaking_rate=speaking_rate,
                 )
             )
+        return sync_segments
 
-        manifest = LipSyncManifest(
-            job_id=job_id,
-            source_language=source_language,
-            target_language=target_language,
-            total_duration_ms=total_duration_ms,
-            dubbed_audio_path=str(dubbed_audio_path),
-            original_video_path=str(original_video_path) if original_video_path else None,
-            segments=sync_segments,
-        )
-
-        # Write manifest
-        self.output_dir.mkdir(parents=True, exist_ok=True)
-        manifest_path = self.output_dir / f"{job_id}_lipsync_manifest.json"
-
-        import asyncio
-
+    async def _export_manifest(self, manifest: LipSyncManifest) -> Path:
+        """Write manifest JSON to disk."""
+        manifest_path = self.output_dir / f"{manifest.job_id}_lipsync_manifest.json"
         await asyncio.to_thread(self._write_manifest, manifest_path, manifest)
-
-        log.info(
-            "lipsync_manifest_exported",
-            job_id=job_id,
-            segments=len(sync_segments),
-            path=str(manifest_path),
-        )
         return manifest_path
 
     @staticmethod

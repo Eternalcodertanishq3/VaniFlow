@@ -69,6 +69,7 @@ class Settings(BaseSettings):
 
     # Upload limits
     max_upload_size_mb: int = Field(default=100, alias="MAX_UPLOAD_SIZE_MB")
+    max_audio_bytes: int = Field(default=524_288_000, alias="MAX_AUDIO_BYTES")  # 500MB
     allowed_upload_formats: str = Field(
         default=".mp3,.mp4,.wav,.webm,.ogg,.m4a,.flac,.mkv",
         alias="ALLOWED_UPLOAD_FORMATS",

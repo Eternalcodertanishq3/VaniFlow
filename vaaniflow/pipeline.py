@@ -20,7 +20,7 @@ from pathlib import Path
 import structlog
 from structlog.contextvars import bind_contextvars, clear_contextvars
 
-from vaaniflow.audio.ambient_separator import AmbientAudioPreserver
+from vaaniflow.audio.demucs_separator import DemucsAmbientPreserver
 from vaaniflow.audio.extractor import AudioExtractor
 from vaaniflow.audio.stitcher import AudioStitcher
 from vaaniflow.cache.redis_cache import TranslationCache
@@ -28,7 +28,7 @@ from vaaniflow.config import settings
 from vaaniflow.cost import cost_tracker
 
 # Phase 2 imports
-from vaaniflow.emotion.detector import EmotionPreserver
+from vaaniflow.emotion.neural_detector import NeuralEmotionPreserver
 from vaaniflow.exceptions import PipelineError
 from vaaniflow.lipsync import LipSyncExporter
 from vaaniflow.metrics import (
@@ -68,6 +68,7 @@ from vaaniflow.qc.pipeline import QualityController
 from vaaniflow.quality.back_translation import BackTranslationQualityScorer
 from vaaniflow.segmentation.boundary_optimizer import SmartSegmentBoundaryOptimizer
 from vaaniflow.subtitles import SubtitleGenerator
+from vaaniflow.utils.audio_io import read_audio_async, write_audio_async
 
 log = structlog.get_logger(__name__)
 
@@ -97,7 +98,10 @@ class VaaniFlowPipeline:
         self.transcription_provider = WhisperProvider()
 
         # Phase 2: Feature modules
-        self.emotion_preserver = EmotionPreserver(enabled=settings.emotion_detection_enabled)
+        self.emotion_preserver = NeuralEmotionPreserver(
+            enabled=settings.emotion_detection_enabled,
+            fallback_to_rule_based=True,
+        )
         self.back_translation_scorer = BackTranslationQualityScorer(
             threshold=settings.back_translation_threshold,
             enabled=settings.back_translation_enabled,
@@ -108,7 +112,10 @@ class VaaniFlowPipeline:
         self.pronunciation_corrector = IndianNamePronunciationCorrector(
             enabled=settings.pronunciation_correction_enabled
         )
-        self.ambient_preserver = AmbientAudioPreserver(enabled=settings.ambient_separation_enabled)
+        self.ambient_preserver = DemucsAmbientPreserver(
+            enabled=settings.ambient_separation_enabled,
+            fallback_to_spectral=True,
+        )
         self.qc_controller = QualityController(
             config=QCConfig(
                 max_silence_ratio=settings.qc_max_silence_ratio,
@@ -146,7 +153,7 @@ class VaaniFlowPipeline:
             ambient_bytes = b""
             if settings.ambient_separation_enabled and raw_audio_path.exists():
                 with PIPELINE_STAGE_DURATION.labels("ambient_separate").time():
-                    raw_audio_bytes = raw_audio_path.read_bytes()
+                    raw_audio_bytes = await read_audio_async(raw_audio_path)
                     separation = await self.ambient_preserver.separate(raw_audio_bytes)
                     ambient_bytes = separation.ambient_bytes
                     if separation.has_significant_ambient:
@@ -237,9 +244,9 @@ class VaaniFlowPipeline:
                 settings.ambient_separation_enabled and job.config.preserve_ambient
             ) and ambient_bytes:
                 with PIPELINE_STAGE_DURATION.labels("ambient_remix").time():
-                    dubbed_bytes = output_path.read_bytes()
+                    dubbed_bytes = await read_audio_async(output_path)
                     remixed = await self.ambient_preserver.remix(dubbed_bytes, ambient_bytes)
-                    output_path.write_bytes(remixed)
+                    await write_audio_async(output_path, remixed)
                     log.info("ambient_remixed")
 
             # Stage 6.6: If input was a video file, multiplex video stream + new dubbed audio track
