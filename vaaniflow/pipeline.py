@@ -101,6 +101,8 @@ class VaaniFlowPipeline:
         self.emotion_preserver = NeuralEmotionPreserver(
             enabled=settings.emotion_detection_enabled,
             fallback_to_rule_based=True,
+            english_model_id=settings.emotion_model_english,
+            indic_model_id=settings.emotion_model_indic,
         )
         self.back_translation_scorer = BackTranslationQualityScorer(
             threshold=settings.back_translation_threshold,
@@ -446,7 +448,10 @@ class VaaniFlowPipeline:
                 *[self._extract_segment_audio(raw_audio_path, seg) for seg in translation.segments]
             )
             emotion_results = await asyncio.gather(
-                *[self.emotion_preserver.detect(audio) for audio in segment_audios]
+                *[
+                    self.emotion_preserver.detect(audio, language=config.target_language.value)
+                    for audio in segment_audios
+                ]
             )
             emotions = {seg.index: emo for seg, emo in zip(translation.segments, emotion_results)}
 
@@ -487,7 +492,7 @@ class VaaniFlowPipeline:
 
         # Phase 2: Emotion detection from original audio is pre-calculated
         if emotion is None:
-            emotion = await self.emotion_preserver.detect(b"")
+            emotion = await self.emotion_preserver.detect(b"", language=config.target_language.value)
 
         EMOTION_DETECTIONS.labels(emotion=emotion.label.value).inc()
 

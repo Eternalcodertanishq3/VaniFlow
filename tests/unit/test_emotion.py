@@ -97,3 +97,59 @@ def test_neutral_result_structure(preserver):
     assert result.pitch_mean_hz == 0.0
     assert result.energy_rms == 0.0
     assert result.tempo_bpm == 0.0
+
+
+# --- Language-Aware Router Tests ---
+
+from vaaniflow.emotion.neural_detector import NeuralEmotionPreserver
+
+
+@pytest.fixture
+def neural_preserver():
+    return NeuralEmotionPreserver(enabled=True)
+
+
+@pytest.mark.asyncio
+async def test_neural_preserver_disabled_returns_neutral():
+    """Disabled neural preserver should return neutral."""
+    preserver = NeuralEmotionPreserver(enabled=False)
+    result = await preserver.detect(b"fake_audio" * 100)
+    assert result.label == EmotionLabel.NEUTRAL
+
+
+@pytest.mark.asyncio
+async def test_neural_preserver_short_audio_returns_neutral(neural_preserver):
+    """Short audio should return neutral regardless of language."""
+    result = await neural_preserver.detect(b"short", language="hi")
+    assert result.label == EmotionLabel.NEUTRAL
+
+
+@pytest.mark.asyncio
+async def test_neural_preserver_empty_audio_returns_neutral(neural_preserver):
+    """Empty audio returns neutral."""
+    result = await neural_preserver.detect(b"", language="ta")
+    assert result.label == EmotionLabel.NEUTRAL
+
+
+def test_neural_preserver_language_routing_english(neural_preserver):
+    """English should route to wav2vec2 model."""
+    model_id = neural_preserver._get_model_id_for_language("en")
+    assert "wav2vec2" in model_id.lower() or "xlsr" in model_id.lower()
+
+
+def test_neural_preserver_language_routing_hindi(neural_preserver):
+    """Hindi should route to IndicWav2Vec model."""
+    model_id = neural_preserver._get_model_id_for_language("hi")
+    assert "indic" in model_id.lower() or "ai4bharat" in model_id.lower()
+
+
+def test_neural_preserver_language_routing_tamil(neural_preserver):
+    """Tamil should route to IndicWav2Vec model."""
+    model_id = neural_preserver._get_model_id_for_language("ta")
+    assert "indic" in model_id.lower() or "ai4bharat" in model_id.lower()
+
+
+def test_neural_preserver_language_routing_unknown(neural_preserver):
+    """Unknown language should fall back to English model."""
+    model_id = neural_preserver._get_model_id_for_language("xx")
+    assert "wav2vec2" in model_id.lower() or "xlsr" in model_id.lower()

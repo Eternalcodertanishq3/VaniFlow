@@ -112,7 +112,7 @@ async def test_manifest_includes_emotion(exporter, segments, tmp_path):
 
 @pytest.mark.asyncio
 async def test_manifest_default_renderer(exporter, segments, tmp_path):
-    """Default renderer should be wav2lip."""
+    """Default renderer should be musetalk."""
     result = await exporter.export(
         segments=segments, job_id="renderer-test",
         dubbed_audio_path=Path("/tmp/dubbed.wav"),
@@ -121,7 +121,7 @@ async def test_manifest_default_renderer(exporter, segments, tmp_path):
     )
     with open(result, "r", encoding="utf-8") as f:
         data = json.load(f)
-    assert data["renderer"] == "wav2lip"
+    assert data["renderer"] == "musetalk"
 
 
 def test_lipsync_manifest_dataclass():
@@ -136,4 +136,4 @@ def test_lipsync_manifest_dataclass():
     d = manifest.to_dict()
     assert d["job_id"] == "dc-test"
     assert d["segments"] == []
-    assert d["renderer"] == "wav2lip"
+    assert d["renderer"] == "musetalk"

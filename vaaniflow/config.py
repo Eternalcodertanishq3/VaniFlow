@@ -52,6 +52,14 @@ class Settings(BaseSettings):
         default=True, alias="PRONUNCIATION_CORRECTION_ENABLED"
     )
     ambient_separation_enabled: bool = Field(default=True, alias="AMBIENT_SEPARATION_ENABLED")
+    emotion_model_english: str = Field(
+        default="ehcalabres/wav2vec2-lg-xlsr-en-speech-emotion-recognition",
+        alias="EMOTION_MODEL_ENGLISH",
+    )
+    emotion_model_indic: str = Field(
+        default="ai4bharat/indicwav2vec_v1_hindi",
+        alias="EMOTION_MODEL_INDIC",
+    )
     qc_enabled: bool = Field(default=True, alias="QC_ENABLED")
     qc_max_silence_ratio: float = Field(default=0.7, alias="QC_MAX_SILENCE_RATIO")
     qc_max_length_ratio: float = Field(default=3.0, alias="QC_MAX_LENGTH_RATIO")

@@ -9,7 +9,7 @@
 > Transcribe → Translate → Synthesize → Stitch — fully async, with emotion preservation, quality control, and production observability.
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![Tests](https://img.shields.io/badge/tests-170%20passed-brightgreen.svg)](#-running-tests)
+[![Tests](https://img.shields.io/badge/tests-171%20passed-brightgreen.svg)](#-running-tests)
 [![Version](https://img.shields.io/badge/version-2.0.0-orange.svg)](pyproject.toml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -72,13 +72,13 @@ VaaniFlow is a **pipeline orchestration engine** — not just an API wrapper. It
 
 | Feature | What It Does | How It Works |
 |---------|-------------|--------------|
-| 🧠 **NeuralEmotionPreserver** | Detects emotion from original audio → adjusts TTS speaking rate, pitch, stability | Primary: wav2vec2 classifier (`ehcalabres/wav2vec2-lg-xlsr-en-speech-emotion-recognition`). Fallback: rule-based librosa pitch/energy/tempo analysis. Confidence-scaled — low-confidence predictions stay closer to neutral. |
+| 🧠 **NeuralEmotionPreserver** | Detects emotion from original audio → adjusts TTS speaking rate, pitch, stability | **Language-aware routing**: English → wav2vec2 classifier. Indian languages (hi, ta, te, bn, mr, gu, kn, ml, pa, or) → IndicWav2Vec (AI4Bharat) embeddings + heuristic classification. Fallback: rule-based librosa pitch/energy/tempo. Confidence-scaled TTS parameters. |
 | 🔄 **BackTranslationQualityScorer** | Back-translates to source → dual-scores with BLEU + multilingual sentence-embedding cosine similarity | Catches hallucinations. If BLEU < 0.30, auto-retries with alternate provider. Embedding similarity catches valid paraphrases BLEU wrongly penalizes. |
 | ✂️ **SmartSegmentBoundaryOptimizer** | Merges fragmented Whisper segments using spaCy sentence tokenization | "The quick brown fox" + "jumped over" → one segment = better translation context |
 | 🗣️ **IndianNamePronunciationCorrector** | 60+ Indian names/places/brands → phonetic hints injected before TTS | "Bangalore" → "Baanga-lore" so TTS pronounces it correctly |
 | 🎵 **DemucsAmbientPreserver** | Separates background audio from speech → re-layers after dubbing | Primary: Demucs 4-stem neural separation (vocals/drums/bass/other). Fallback: scipy spectral subtraction. Background music survives dubbing. |
 | 🔀 **CodeSwitchNormalizer** | Detects English words in Indic text (Hinglish/Tanglish) → marks with `[EN:]` tags for TTS | "Bill print karo" reads naturally without breaking accent or pacing |
-| 🎬 **LipSyncExporter** | Generates lip-synced video or exports timing manifest | Primary: Wav2Lip neural inference (if installed with checkpoint). Fallback: JSON timing manifest with per-segment emotion/rate metadata. |
+| 🎬 **LipSyncExporter** | Generates lip-synced video or exports timing manifest | Primary: MuseTalk neural inference (MIT license, commercially safe). Fallback: JSON timing manifest with per-segment emotion/rate metadata. |
 | 📝 **SubtitleGenerator** | Generates SRT and VTT subtitle files from translated segments | Uses existing pipeline segment timing — no extra processing needed |
 | 🔒 **Upload & Auth Guard** | Enforces file size limits (100MB), extension whitelist, content-type checks & optional API key auth | Prevents OOM attacks and unauthorized access. Health/metrics endpoints bypass auth. |
 | 🎛️ **Configurable Sarvam Pipeline** | Full control over speaker gender (`Male`/`Female`), translation mode (`formal`/`informal`), loudness (`0.5–3.0x`) | Passed per-job through the API, not hardcoded |
@@ -137,8 +137,9 @@ The neural features (Demucs source separation, wav2vec2 emotion detection) requi
 | Feature | With `[neural]` installed | Without (fallback) |
 |---------|--------------------------|---------------------|
 | Ambient separation | Demucs 4-stem neural separation | scipy spectral subtraction |
-| Emotion detection | wav2vec2 audio classifier | Rule-based librosa pitch/energy analysis |
-| Lip-sync video | Wav2Lip (requires separate checkpoint download) | JSON timing manifest only |
+| Emotion detection (English) | wav2vec2 audio classifier | Rule-based librosa pitch/energy analysis |
+| Emotion detection (Indian) | IndicWav2Vec embeddings + heuristic classifier | Rule-based librosa pitch/energy analysis |
+| Lip-sync video | MuseTalk (MIT license, requires separate setup) | JSON timing manifest only |
 
 ---
 
@@ -332,10 +333,13 @@ Single-text translation called N times = N network round-trips. Batch translatio
 Translation APIs can hallucinate, especially with short segments or code-mixed text. Back-translating and computing BLEU catches these silently. If BLEU < 0.30, the segment is auto-retried with an alternate provider.
 
 ### Why Neural + Fallback Architecture?
-The neural modules (Demucs, wav2vec2, Wav2Lip) are **optional**. Without PyTorch installed, VaaniFlow falls back to lighter alternatives (spectral subtraction, rule-based emotion detection, JSON manifests). This means:
+The neural modules (Demucs, wav2vec2, IndicWav2Vec, MuseTalk) are **optional**. Without PyTorch installed, VaaniFlow falls back to lighter alternatives (spectral subtraction, rule-based emotion detection, JSON manifests). This means:
 - **Dev/CI** runs without 2GB+ of neural model downloads
 - **Production** installs `pip install -e ".[neural]"` for best quality
 - No code changes needed — same pipeline, different quality tier
+
+### Why Language-Aware Emotion Routing?
+The English wav2vec2 emotion classifier performs poorly on Indian language audio — different prosody patterns, pitch ranges, and rhythmic structures. IndicWav2Vec (AI4Bharat, IIT Madras) is pretrained on 40+ Indian languages and captures these patterns better. The pipeline automatically routes based on `target_language`.
 
 ### Why Async I/O with Memory Guard?
 The pipeline handles audio files that can be 100MB+. Blocking `.read_bytes()` calls freeze the event loop during file I/O. `asyncio.to_thread()` offloads file reads to the thread pool. The 500MB memory guard prevents OOM on unexpected inputs.
@@ -351,7 +355,7 @@ JSON-structured logging with `contextvars` means every log event in a pipeline r
 ## 🧪 Running Tests
 
 ```bash
-# All tests (170 tests)
+# All tests (177 tests)
 pytest -v
 
 # Unit tests only
@@ -371,7 +375,7 @@ pytest --cov=vaaniflow --cov=api -v
 | API Authentication | 6 | Dev mode bypass, static API key validation, health/metrics bypass |
 | Upload Validation | 8 | File size limit, format whitelist, content-type, empty file checks |
 | QC Pipeline | 7 | Silence ratio, length ratio, min bytes, mixed segments |
-| Emotion Detection | 9 | Neutral fallback, classification rules, TTS param mapping |
+| Emotion Detection | 16 | Neutral fallback, classification rules, TTS param mapping, language-aware routing |
 | Back-Translation | 10 | BLEU scoring, threshold, short-text skip, provider errors |
 | Boundary Optimizer | 5 | Merging, gap constraint, word limit, spaCy unavailable |
 | Pronunciation | 12 | Lexicon substitution, case-insensitive, Hinglish edge cases |
@@ -412,10 +416,11 @@ VaaniFlow/
 │   │   └── demucs_separator.py        # Neural 4-stem separation (primary)
 │   ├── emotion/                       # Emotion detection
 │   │   ├── detector.py                # Rule-based librosa analysis (fallback)
-│   │   └── neural_detector.py         # wav2vec2 classifier (primary)
+│   │   └── neural_detector.py         # Language-aware router (wav2vec2 + IndicWav2Vec)
 │   ├── lipsync/                       # Lip-sync generation
 │   │   ├── __init__.py                # LipSyncExporter + JSON manifest
-│   │   └── wav2lip_generator.py       # Wav2Lip subprocess runner (primary)
+│   │   ├── musetalk_generator.py      # MuseTalk subprocess runner (MIT license)
+│   │   └── wav2lip_generator.py       # DEPRECATED (replaced by MuseTalk)
 │   ├── cache/                         # Redis translation cache
 │   ├── cost/                          # API cost tracker + savings calculator
 │   ├── normalization/                 # Code-switching normalizer (Hinglish)
@@ -445,7 +450,7 @@ VaaniFlow/
 │       └── logging_middleware.py      # Request/response logging
 ├── ui/                                # Web UI (single-page HTML)
 │   └── index.html                     # Dubbing job creation interface
-├── tests/                             # 170 unit + integration tests
+├── tests/                             # 177 unit + integration tests
 │   ├── conftest.py                    # Shared fixtures + mocks
 │   ├── unit/                          # 23 test files
 │   └── integration/                   # API + full pipeline tests
@@ -472,6 +477,8 @@ BACK_TRANSLATION_THRESHOLD=0.30
 BOUNDARY_OPTIMIZATION_ENABLED=true
 PRONUNCIATION_CORRECTION_ENABLED=true
 AMBIENT_SEPARATION_ENABLED=true
+EMOTION_MODEL_ENGLISH=ehcalabres/wav2vec2-lg-xlsr-en-speech-emotion-recognition
+EMOTION_MODEL_INDIC=ai4bharat/indicwav2vec_v1_hindi
 QC_ENABLED=true
 QC_MAX_SILENCE_RATIO=0.7
 QC_MAX_LENGTH_RATIO=3.0
@@ -573,10 +580,10 @@ LOG_LEVEL=INFO
 
 | Component | What's Built | What's Not | Status |
 |---|---|---|---|
-| **NeuralEmotionPreserver** | wav2vec2 classifier with confidence-scaled TTS params. Falls back to rule-based if torch unavailable. | Not validated on large-scale diverse datasets beyond RAVDESS. Works best on English speech. | ✅ Built with fallback |
+| **NeuralEmotionPreserver** | Language-aware routing: English → wav2vec2, Indian → IndicWav2Vec embeddings + heuristic classification, Unknown → rule-based librosa. All with confidence-scaled TTS parameters. | IndicWav2Vec produces **embeddings, not emotion labels**. The Indian language emotion classification is heuristic-based on embedding features — not a fine-tuned emotion classifier. For production accuracy, a labeled Indian emotional speech dataset would be needed. English emotion detection is validated on RAVDESS. | ✅ Built with language routing |
 | **DemucsAmbientPreserver** | Full Demucs 4-stem separation (htdemucs model). Falls back to scipy spectral subtraction. | Demucs is CPU-heavy (~10s per minute of audio). Requires `pip install -e ".[neural]"`. | ✅ Built with fallback |
-| **Wav2LipGenerator** | Subprocess runner for Wav2Lip inference, integrated into LipSyncExporter. | Requires separate Wav2Lip installation + checkpoint download (~170MB). Not bundled — runs as subprocess. | ✅ Built, needs external setup |
-| **LipSyncExporter** | Tries Wav2Lip first → falls back to JSON timing manifest. | JSON manifest requires downstream renderer to consume it. | ✅ Built with fallback |
+| **MuseTalkGenerator** | MIT-licensed lip-sync video generation via MuseTalk subprocess. Integrated into LipSyncExporter. | Requires separate MuseTalk installation + checkpoint download. Not bundled — runs as subprocess. | ✅ Built, needs external setup |
+| **LipSyncExporter** | Tries MuseTalk first → falls back to JSON timing manifest. | JSON manifest requires downstream renderer to consume it. | ✅ Built with fallback |
 | **Multi-character dubbing** | Single voice per job. | No speaker diarization — would need pyannote.audio to assign different voices to different speakers. | ❌ Not built |
 | **Upload validation** | Static API key auth, file size/format/type checks. | No OAuth2, JWT, or presigned URL upload. | ✅ Functional, not enterprise SSO |
 | **BackTranslation** | BLEU + multilingual embedding dual scoring. | Embedding model is 118MB. No streaming — loads full model to memory. | ✅ Built |

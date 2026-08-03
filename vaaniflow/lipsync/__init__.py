@@ -3,7 +3,7 @@ Video Lip-Sync Pipeline Step.
 
 This module provides lip synchronization capabilities for VaaniFlow.
 
-Primary: Wav2Lip neural lip-sync generation (if installed)
+Primary: MuseTalk neural lip-sync generation (if installed)
 Fallback: JSON timing manifest export (always available)
 
 Pipeline integration point:
@@ -18,7 +18,7 @@ from typing import Optional
 
 import structlog
 
-from vaaniflow.lipsync.wav2lip_generator import Wav2LipGenerator
+from vaaniflow.lipsync.musetalk_generator import MuseTalkGenerator
 from vaaniflow.models import AudioSegment
 
 log = structlog.get_logger(__name__)
@@ -55,7 +55,7 @@ class LipSyncManifest:
     dubbed_audio_path: str
     original_video_path: Optional[str] = None
     segments: Optional[list[LipSyncSegment]] = None
-    renderer: str = "wav2lip"
+    renderer: str = "musetalk"
 
     def __post_init__(self):
         if self.segments is None:
@@ -67,10 +67,10 @@ class LipSyncManifest:
 
 class LipSyncExporter:
     """
-    Exports lip-sync data — either as a Wav2Lip-generated video
+    Exports lip-sync data — either as a MuseTalk-generated video
     or a JSON timing manifest for downstream renderers.
 
-    Primary: Wav2Lip neural lip-sync video generation
+    Primary: MuseTalk neural lip-sync video generation
     Fallback: JSON manifest with segment timestamps
 
     Usage in pipeline:
@@ -89,7 +89,7 @@ class LipSyncExporter:
     def __init__(self, enabled: bool = False, output_dir: str = "outputs"):
         self.enabled = enabled
         self.output_dir = Path(output_dir)
-        self.wav2lip = Wav2LipGenerator(enabled=enabled)
+        self.musetalk = MuseTalkGenerator(enabled=enabled)
 
     async def export(
         self,
@@ -105,7 +105,7 @@ class LipSyncExporter:
         """
         Export lip-sync output.
 
-        1. If Wav2Lip is available and input is a video:
+        1. If MuseTalk is available and input is a video:
            → Generate lip-synced video
         2. Always export JSON manifest as well
            → For downstream renderers or manual inspection
@@ -136,14 +136,14 @@ class LipSyncExporter:
         # Always export JSON manifest
         manifest_path = await self._export_manifest(manifest)
 
-        # Try Wav2Lip if available and input is video
+        # Try MuseTalk if available and input is video
         if (
-            self.wav2lip.is_available
+            self.musetalk.is_available
             and original_video_path
             and original_video_path.suffix.lower() in {".mp4", ".webm", ".mkv", ".avi", ".mov"}
         ):
             lipsync_output = self.output_dir / f"{job_id}_lipsync.mp4"
-            result = await self.wav2lip.generate(
+            result = await self.musetalk.generate(
                 original_video_path=original_video_path,
                 dubbed_audio_path=dubbed_audio_path,
                 output_path=lipsync_output,
