@@ -25,6 +25,8 @@ import structlog
 
 from vaaniflow.audio.ambient_separator import (
     AmbientAudioPreserver as SpectralSeparator,
+)
+from vaaniflow.audio.ambient_separator import (
     SeparationResult,
 )
 from vaaniflow.exceptions import AudioProcessingError
