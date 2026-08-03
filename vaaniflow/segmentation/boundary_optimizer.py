@@ -104,7 +104,7 @@ class SmartSegmentBoundaryOptimizer:
         doc = nlp(full_text)
         sentence_boundaries = {sent.end_char for sent in doc.sents}
 
-        merged = []
+        merged: list[AudioSegment] = []
         buffer_segments = [segments[0]]
         char_pos = len(segments[0].original_text)
 

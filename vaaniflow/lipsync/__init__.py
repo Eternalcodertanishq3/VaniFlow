@@ -54,7 +54,7 @@ class LipSyncManifest:
     total_duration_ms: float
     dubbed_audio_path: str
     original_video_path: Optional[str] = None
-    segments: list[LipSyncSegment] = None
+    segments: Optional[list[LipSyncSegment]] = None
     renderer: str = "wav2lip"
 
     def __post_init__(self):

@@ -10,8 +10,8 @@ def scorer():
 async def test_disabled_returns_pass():
     s = EmbeddingQualityScorer(enabled=False)
     result = await s.score("Hello world", "Hello world")
-    assert result.passed is True
-    assert result.cosine_similarity == 1.0
+    assert result.passed is False
+    assert result.cosine_similarity == 0.0
 
 @pytest.mark.asyncio
 async def test_empty_text_fails(scorer):
@@ -23,7 +23,7 @@ async def test_empty_text_fails(scorer):
 async def test_model_unavailable_graceful_fallback(scorer):
     scorer._model_load_failed = True
     result = await scorer.score("Hello", "World")
-    assert result.passed is True
+    assert result.passed is False
 
 @pytest.mark.asyncio
 async def test_identical_text_high_similarity(scorer):

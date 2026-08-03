@@ -26,7 +26,7 @@ class QualityController:
     Runs in parallel across all segments for speed.
     """
 
-    def __init__(self, config: QCConfig = None):
+    def __init__(self, config: QCConfig | None = None):
         self.config = config or QCConfig()
 
     async def validate_pipeline_output(

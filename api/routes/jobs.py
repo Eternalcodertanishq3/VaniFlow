@@ -5,6 +5,7 @@ Dubbing job API endpoints.
 import asyncio
 import tempfile
 from pathlib import Path
+from typing import Literal
 
 import structlog
 from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile
@@ -39,8 +40,8 @@ async def create_dubbing_job(
     tts_provider: TTSProvider = Form(default=TTSProvider.SARVAM),
     translation_provider: TranslationProvider | None = Form(default=None),
     voice_id: str | None = Form(default=None),
-    speaker_gender: str = Form(default="Male"),
-    translation_mode: str = Form(default="formal"),
+    speaker_gender: Literal["Male", "Female"] = Form(default="Male"),
+    translation_mode: Literal["formal", "informal"] = Form(default="formal"),
     loudness: float = Form(default=1.5, ge=0.5, le=3.0),
     preserve_ambient: bool = Form(default=True),
 ):

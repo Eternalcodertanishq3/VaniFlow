@@ -19,13 +19,12 @@ Architecture:
 import asyncio
 import importlib.util
 import io
+from typing import Any
 
 import structlog
 
 from vaaniflow.audio.ambient_separator import (
     AmbientAudioPreserver as SpectralSeparator,
-)
-from vaaniflow.audio.ambient_separator import (
     SeparationResult,
 )
 from vaaniflow.exceptions import AudioProcessingError
@@ -60,7 +59,7 @@ class DemucsAmbientPreserver:
             enabled=enabled, ambient_gain_db=ambient_gain_db
         )
         self._demucs_available = self._check_demucs()
-        self._separator = None
+        self._separator: Any = None
 
     def _check_demucs(self) -> bool:
         """Check if demucs and torch are installed."""

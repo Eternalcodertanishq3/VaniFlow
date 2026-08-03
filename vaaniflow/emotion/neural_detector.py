@@ -181,7 +181,7 @@ class NeuralEmotionPreserver:
         stability = params["stability"]
 
         # Extract basic acoustic features for the result dataclass
-        pitch_mean = self._quick_pitch(y, sr)
+        pitch_mean = self._quick_pitch(y, int(sr))
         energy_rms = float(np.sqrt(np.mean(y**2)))
 
         log.info(
@@ -212,8 +212,8 @@ class NeuralEmotionPreserver:
 
             f0, voiced_flag, _ = librosa.pyin(
                 y,
-                fmin=librosa.note_to_hz("C2"),
-                fmax=librosa.note_to_hz("C7"),
+                fmin=float(librosa.note_to_hz("C2")),
+                fmax=float(librosa.note_to_hz("C7")),
                 sr=sr,
             )
             voiced_f0 = f0[voiced_flag > 0.5] if f0 is not None else np.array([])

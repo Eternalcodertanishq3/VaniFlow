@@ -60,11 +60,11 @@ class EmbeddingQualityScorer:
 
     async def score(self, original_text: str, back_translated_text: str) -> EmbeddingScore:
         if not self.enabled:
-            return EmbeddingScore(cosine_similarity=1.0, passed=True, model_used="disabled")
+            return EmbeddingScore(cosine_similarity=0.0, passed=False, model_used="disabled")
 
         model = self._get_model()
         if model is None:
-            return EmbeddingScore(cosine_similarity=1.0, passed=True, model_used="unavailable")
+            return EmbeddingScore(cosine_similarity=0.0, passed=False, model_used="unavailable")
 
         if not original_text.strip() or not back_translated_text.strip():
             return EmbeddingScore(cosine_similarity=0.0, passed=False, model_used=self.MODEL_NAME)
@@ -86,7 +86,7 @@ class EmbeddingQualityScorer:
             )
         except Exception as e:
             log.warning("embedding_scoring_failed", error=str(e))
-            return EmbeddingScore(cosine_similarity=1.0, passed=True, model_used="error_fallback")
+            return EmbeddingScore(cosine_similarity=0.0, passed=False, model_used="error_fallback")
 
     def _compute_similarity_sync(self, model, text_a: str, text_b: str) -> float:
         import numpy as np

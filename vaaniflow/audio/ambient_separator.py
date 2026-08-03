@@ -37,7 +37,7 @@ class AmbientAudioPreserver:
     def __init__(self, enabled: bool = True, ambient_gain_db: float = -6.0):
         self.enabled = enabled
         self.ambient_gain_db = ambient_gain_db
-        self._scipy_available = None
+        self._scipy_available: bool | None = None
 
     def _check_scipy(self) -> bool:
         if self._scipy_available is None:

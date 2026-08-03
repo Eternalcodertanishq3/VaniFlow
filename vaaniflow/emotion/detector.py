@@ -70,7 +70,7 @@ class EmotionPreserver:
 
     def __init__(self, enabled: bool = True):
         self.enabled = enabled
-        self._librosa_available = None
+        self._librosa_available: bool | None = None
 
     def _check_librosa(self) -> bool:
         if self._librosa_available is None:
@@ -167,7 +167,7 @@ class EmotionPreserver:
 
         try:
             f0, voiced_flag, _ = librosa.pyin(
-                y, fmin=librosa.note_to_hz("C2"), fmax=librosa.note_to_hz("C7"), sr=sr
+                y, fmin=float(librosa.note_to_hz("C2")), fmax=float(librosa.note_to_hz("C7")), sr=sr
             )
             voiced_f0 = f0[voiced_flag > 0.5] if f0 is not None else np.array([])
             return float(np.mean(voiced_f0)) if len(voiced_f0) > 0 else 0.0

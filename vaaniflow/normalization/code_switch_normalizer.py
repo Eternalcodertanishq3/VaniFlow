@@ -76,7 +76,7 @@ class CodeSwitchNormalizer:
     Hindi verbs → Devanagari).
     """
 
-    def __init__(self, enabled: bool = True, custom_phrases: dict = None):
+    def __init__(self, enabled: bool = True, custom_phrases: dict | None = None):
         self.enabled = enabled
         self.phrase_map = {**COMMON_CODE_SWITCH_PHRASES, **(custom_phrases or {})}
         self._phrase_patterns = self._compile_phrase_patterns()

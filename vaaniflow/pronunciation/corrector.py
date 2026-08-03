@@ -20,7 +20,7 @@ class IndianNamePronunciationCorrector:
     Applied as a transformation step before TTS synthesis.
     """
 
-    def __init__(self, enabled: bool = True, custom_map: dict = None):
+    def __init__(self, enabled: bool = True, custom_map: dict | None = None):
         self.enabled = enabled
         self.pronunciation_map = {**INDIAN_PRONUNCIATION_MAP, **(custom_map or {})}
         self._patterns = self._compile_patterns()

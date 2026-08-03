@@ -8,7 +8,7 @@ import logging
 import sys
 
 import structlog
-from structlog.types import EventDict, WrappedLogger
+from structlog.types import EventDict, Processor, WrappedLogger
 
 
 def add_job_context(logger: WrappedLogger, method: str, event_dict: EventDict) -> EventDict:
@@ -21,7 +21,7 @@ def setup_logging(log_level: str = "INFO") -> None:
     Configure structlog for production JSON logging.
     Every log event includes: timestamp, level, logger, event, + context fields.
     """
-    shared_processors = [
+    shared_processors: list[Processor] = [
         structlog.contextvars.merge_contextvars,
         structlog.processors.add_log_level,
         structlog.processors.TimeStamper(fmt="iso"),
