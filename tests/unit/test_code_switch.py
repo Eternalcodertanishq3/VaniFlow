@@ -4,9 +4,10 @@ Tests Hinglish/Tanglish detection, English-token marking, phrase normalisation,
 and edge cases (pure scripts, numbers, disabled mode).
 """
 import pytest
+
 from vaaniflow.normalization.code_switch_normalizer import (
-    CodeSwitchNormalizer,
     COMMON_CODE_SWITCH_PHRASES,
+    CodeSwitchNormalizer,
 )
 
 

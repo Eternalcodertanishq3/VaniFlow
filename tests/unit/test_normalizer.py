@@ -1,9 +1,11 @@
 """
 Unit tests for AudioNormalizer.
 """
-import pytest
-from unittest.mock import patch, MagicMock
 from pathlib import Path
+from unittest.mock import MagicMock, patch
+
+import pytest
+
 from vaaniflow.audio.normalizer import AudioNormalizer
 from vaaniflow.exceptions import AudioProcessingError
 

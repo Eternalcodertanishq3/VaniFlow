@@ -2,6 +2,7 @@
 Unit tests for voices catalog API endpoint.
 """
 from fastapi.testclient import TestClient
+
 from api.main import app
 
 client = TestClient(app)

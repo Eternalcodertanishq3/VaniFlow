@@ -2,25 +2,25 @@
 Unit tests for the dubbing pipeline.
 Tests full pipeline flow with mocked providers.
 """
-import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
 from pathlib import Path
+from unittest.mock import patch
 
+import pytest
+
+from vaaniflow.exceptions import PipelineError
 from vaaniflow.models import (
+    AudioSegment,
     DubbingJob,
     DubbingJobConfig,
     JobStatus,
     SupportedLanguage,
-    TTSProvider,
-    TranslationProvider,
     TranscriptionProvider,
     TranscriptionResult,
+    TranslationProvider,
     TranslationResult,
+    TTSProvider,
     TTSResult,
-    AudioSegment,
 )
-from vaaniflow.providers.tts.base import TTSSynthesisResponse
-from vaaniflow.exceptions import PipelineError
 
 
 @pytest.fixture
@@ -56,8 +56,6 @@ async def test_pipeline_status_transitions(dubbing_job):
     assert dubbing_job.status == JobStatus.PENDING
 
     statuses_seen = []
-
-    original_update = None
 
     async def track_status(job, status, progress):
         statuses_seen.append(status)

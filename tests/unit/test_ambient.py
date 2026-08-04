@@ -2,8 +2,10 @@
 Unit tests for AmbientAudioPreserver.
 Tests separation and remix with mocked scipy.
 """
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
+
 from vaaniflow.audio.ambient_separator import AmbientAudioPreserver, SeparationResult
 
 

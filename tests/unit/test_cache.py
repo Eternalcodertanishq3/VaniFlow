@@ -1,8 +1,8 @@
 """
 Unit tests for the Redis translation cache.
 """
+
 import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
 
 from vaaniflow.cache.redis_cache import TranslationCache
 

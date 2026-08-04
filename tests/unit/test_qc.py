@@ -2,12 +2,13 @@
 Unit tests for the Quality Control pipeline.
 Tests segment validation: silence ratio, length ratio, min bytes.
 """
-import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import patch
 
-from vaaniflow.qc.pipeline import QualityController
-from vaaniflow.qc.models import QCStatus, QCConfig, SegmentQCResult, PipelineQCResult
+import pytest
+
 from vaaniflow.models import AudioSegment
+from vaaniflow.qc.models import QCConfig, QCStatus
+from vaaniflow.qc.pipeline import QualityController
 
 
 @pytest.fixture

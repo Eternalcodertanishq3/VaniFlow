@@ -2,11 +2,9 @@
 Integration tests for the FastAPI API.
 Tests endpoints with mocked pipeline.
 """
-import pytest
-from unittest.mock import patch, AsyncMock, MagicMock
-from pathlib import Path
+from unittest.mock import AsyncMock, patch
 
-from vaaniflow.models import JobStatus
+import pytest
 
 
 @pytest.mark.asyncio

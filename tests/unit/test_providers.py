@@ -2,17 +2,18 @@
 Unit tests for providers.
 Tests language support, response parsing, and error mapping.
 """
-import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
-from vaaniflow.providers.tts.base import TTSSynthesisRequest, TTSSynthesisResponse
-from vaaniflow.providers.tts.gtts_provider import GTTSProvider
-from vaaniflow.providers.tts.elevenlabs_provider import ElevenLabsProvider
-from vaaniflow.providers.tts.sarvam_provider import SarvamTTSProvider
+import pytest
+
+from vaaniflow.providers.transcription.assembly_provider import AssemblyAIProvider
+from vaaniflow.providers.transcription.whisper_provider import WhisperProvider
 from vaaniflow.providers.translation.google_provider import GoogleTranslationProvider
 from vaaniflow.providers.translation.sarvam_provider import SarvamTranslationProvider
-from vaaniflow.providers.transcription.whisper_provider import WhisperProvider
-from vaaniflow.providers.transcription.assembly_provider import AssemblyAIProvider
+from vaaniflow.providers.tts.base import TTSSynthesisRequest
+from vaaniflow.providers.tts.elevenlabs_provider import ElevenLabsProvider
+from vaaniflow.providers.tts.gtts_provider import GTTSProvider
+from vaaniflow.providers.tts.sarvam_provider import SarvamTTSProvider
 
 
 class TestGTTSProvider:

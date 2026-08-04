@@ -1,12 +1,12 @@
 """
 Unit tests for API key authentication middleware.
 """
-import pytest
 from unittest.mock import patch
-from starlette.testclient import TestClient
+
 from starlette.applications import Starlette
 from starlette.responses import JSONResponse
 from starlette.routing import Route
+from starlette.testclient import TestClient
 
 from api.middleware.auth_middleware import APIKeyAuthMiddleware
 

@@ -2,23 +2,24 @@
 End-to-end integration test for the full dubbing pipeline.
 All external services are mocked.
 """
-import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
 from pathlib import Path
+from unittest.mock import patch
+
+import pytest
 
 from vaaniflow.models import (
+    AudioSegment,
     DubbingJob,
     DubbingJobConfig,
+    JobStatus,
     SupportedLanguage,
-    TTSProvider,
-    TranslationProvider,
     TranscriptionProvider,
     TranscriptionResult,
-    AudioSegment,
-    JobStatus,
+    TranslationProvider,
+    TTSProvider,
 )
-from vaaniflow.providers.tts.base import TTSSynthesisResponse
 from vaaniflow.pipeline import VaaniFlowPipeline
+from vaaniflow.providers.tts.base import TTSSynthesisResponse
 
 
 @pytest.mark.asyncio
@@ -57,7 +58,7 @@ async def test_full_pipeline_with_mocked_providers():
          patch("vaaniflow.providers.transcription.whisper_provider.WhisperProvider.transcribe") as mock_transcribe, \
          patch("vaaniflow.providers.translation.google_provider.GoogleTranslationProvider.translate") as mock_translate, \
          patch("vaaniflow.providers.translation.google_provider.GoogleTranslationProvider.translate_batch") as mock_translate_batch, \
-         patch("vaaniflow.providers.tts.gtts_provider.GTTSProvider.synthesize") as mock_synthesize, \
+         patch("vaaniflow.providers.tts.gtts_provider.GTTSProvider.synthesize") as _mock_synthesize, \
          patch("vaaniflow.providers.tts.gtts_provider.GTTSProvider.synthesize_with_logging") as mock_synth_log, \
          patch("vaaniflow.audio.stitcher.AudioStitcher.stitch") as mock_stitch, \
          patch("vaaniflow.cache.redis_cache.TranslationCache.get") as mock_cache_get, \

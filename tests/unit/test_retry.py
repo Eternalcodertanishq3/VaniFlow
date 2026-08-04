@@ -2,17 +2,15 @@
 Unit tests for retry logic.
 Tests that different errors trigger the right retry behavior.
 """
+
 import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
-from tenacity import RetryError
 
 from vaaniflow.exceptions import (
-    RateLimitError,
     AuthenticationError,
     ProviderServerError,
     ProviderTimeoutError,
+    RateLimitError,
 )
-from vaaniflow.providers.tts.base import TTSSynthesisRequest, TTSSynthesisResponse
 
 
 @pytest.mark.asyncio

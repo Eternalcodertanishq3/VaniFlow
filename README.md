@@ -355,7 +355,7 @@ JSON-structured logging with `contextvars` means every log event in a pipeline r
 ## 🧪 Running Tests
 
 ```bash
-# All tests (177 tests)
+# All tests (171 passed)
 pytest -v
 
 # Unit tests only
@@ -449,7 +449,7 @@ VaaniFlow/
 │       └── logging_middleware.py      # Request/response logging
 ├── ui/                                # Web UI (single-page HTML)
 │   └── index.html                     # Dubbing job creation interface
-├── tests/                             # 177 unit + integration tests
+├── tests/                             # 171 unit + integration tests
 │   ├── conftest.py                    # Shared fixtures + mocks
 │   ├── unit/                          # 23 test files
 │   └── integration/                   # API + full pipeline tests

@@ -1,6 +1,8 @@
 import pytest
-from vaaniflow.subtitles.generator import SubtitleGenerator, _format_srt_timestamp, _format_vtt_timestamp
+
 from vaaniflow.models import AudioSegment
+from vaaniflow.subtitles.generator import SubtitleGenerator, _format_srt_timestamp, _format_vtt_timestamp
+
 
 @pytest.fixture
 def segments():

@@ -2,11 +2,16 @@
 Unit tests for EmotionPreserver.
 Tests neutral fallback, emotion classification, and TTS param mapping.
 """
+
 import pytest
-from unittest.mock import patch, MagicMock
+
 from vaaniflow.emotion.detector import (
-    EmotionPreserver, EmotionLabel, EmotionResult, EMOTION_TTS_PARAMS,
+    EMOTION_TTS_PARAMS,
+    EmotionLabel,
+    EmotionPreserver,
+    EmotionResult,
 )
+from vaaniflow.emotion.neural_detector import NeuralEmotionPreserver
 
 
 @pytest.fixture
@@ -100,8 +105,6 @@ def test_neutral_result_structure(preserver):
 
 
 # --- Language-Aware Router Tests ---
-
-from vaaniflow.emotion.neural_detector import NeuralEmotionPreserver
 
 
 @pytest.fixture

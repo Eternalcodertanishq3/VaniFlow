@@ -2,6 +2,7 @@
 Unit tests for Token & Cost Optimization Tracker.
 """
 import pytest
+
 from vaaniflow.cost import CostTracker
 
 

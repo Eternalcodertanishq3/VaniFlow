@@ -1,12 +1,13 @@
 """
 Unit tests for LipSyncExporter — the multi-modal pipeline placeholder.
 """
-import pytest
 import json
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
-from vaaniflow.lipsync import LipSyncExporter, LipSyncManifest, LipSyncSegment
+import pytest
+
+from vaaniflow.lipsync import LipSyncExporter, LipSyncManifest
 from vaaniflow.models import AudioSegment
 
 

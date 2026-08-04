@@ -2,15 +2,15 @@
 Pytest fixtures. All external providers must be mocked in tests.
 Sarvam JD: "Experience writing tests and mocking external services"
 """
+from unittest.mock import AsyncMock, patch
+
 import pytest
 import pytest_asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
-from httpx import AsyncClient, ASGITransport
+from httpx import ASGITransport, AsyncClient
 
 from api.main import app
 from vaaniflow.models import (
     AudioSegment,
-    SupportedLanguage,
     TranscriptionProvider,
     TranscriptionResult,
 )
@@ -140,7 +140,7 @@ def sample_transcription_result():
 def mock_emotion_preserver():
     """Mock emotion preserver to return neutral."""
     with patch("vaaniflow.emotion.detector.EmotionPreserver.detect") as mock:
-        from vaaniflow.emotion.detector import EmotionResult, EmotionLabel
+        from vaaniflow.emotion.detector import EmotionLabel, EmotionResult
         mock.return_value = EmotionResult(
             label=EmotionLabel.NEUTRAL, confidence=1.0,
             pitch_mean_hz=0.0, energy_rms=0.0, tempo_bpm=0.0,

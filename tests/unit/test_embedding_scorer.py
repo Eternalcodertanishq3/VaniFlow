@@ -1,6 +1,9 @@
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
+
 from vaaniflow.quality.embedding_scorer import EmbeddingQualityScorer
+
 
 @pytest.fixture
 def scorer():

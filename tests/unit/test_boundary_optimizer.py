@@ -2,10 +2,12 @@
 Unit tests for SmartSegmentBoundaryOptimizer.
 Tests segment merging, gap constraint, word limit.
 """
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import patch, MagicMock
+
+from vaaniflow.models import AudioSegment, TranscriptionProvider, TranscriptionResult
 from vaaniflow.segmentation.boundary_optimizer import SmartSegmentBoundaryOptimizer
-from vaaniflow.models import AudioSegment, TranscriptionResult, TranscriptionProvider
 
 
 @pytest.fixture

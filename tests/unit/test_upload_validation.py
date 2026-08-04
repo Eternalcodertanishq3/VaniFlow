@@ -1,10 +1,10 @@
 """
 Unit tests for file upload validation.
 """
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 from io import BytesIO
+from unittest.mock import patch
 
+import pytest
 from fastapi import HTTPException, UploadFile
 
 

@@ -2,10 +2,12 @@
 Unit tests for BackTranslationQualityScorer.
 Tests BLEU scoring, threshold pass/fail, short-text skip.
 """
+from unittest.mock import AsyncMock
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock
+
 from vaaniflow.quality.back_translation import (
-    BackTranslationQualityScorer, BackTranslationScore,
+    BackTranslationQualityScorer,
 )
 
 

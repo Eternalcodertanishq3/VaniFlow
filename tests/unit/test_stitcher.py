@@ -1,12 +1,12 @@
 """
 Unit tests for AudioStitcher.
 """
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
-from pathlib import Path
+
 from vaaniflow.audio.stitcher import AudioStitcher
 from vaaniflow.models import AudioSegment
-from vaaniflow.exceptions import AudioProcessingError
 
 
 class TestAudioStitcher:
