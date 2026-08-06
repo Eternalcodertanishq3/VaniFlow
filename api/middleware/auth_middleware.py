@@ -14,7 +14,8 @@ from vaaniflow.config import settings
 log = structlog.get_logger(__name__)
 
 # Paths that bypass authentication
-AUTH_EXEMPT_PREFIXES = ("/health", "/metrics", "/docs", "/openapi.json", "/ui", "/")
+AUTH_EXEMPT_PREFIXES = ("/health", "/metrics", "/docs", "/openapi.json")
+AUTH_EXEMPT_EXACT = ("/", "/ui")
 
 
 class APIKeyAuthMiddleware(BaseHTTPMiddleware):
@@ -25,9 +26,9 @@ class APIKeyAuthMiddleware(BaseHTTPMiddleware):
         if not settings.api_key:
             return await call_next(request)
 
-        # Skip auth for health and metrics endpoints
+        # Skip auth for health, metrics, docs, and UI endpoints
         path = request.url.path
-        if any(path.startswith(prefix) for prefix in AUTH_EXEMPT_PREFIXES):
+        if path in AUTH_EXEMPT_EXACT or any(path.startswith(prefix) for prefix in AUTH_EXEMPT_PREFIXES):
             return await call_next(request)
 
         # Validate API key

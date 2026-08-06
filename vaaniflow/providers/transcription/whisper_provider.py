@@ -100,19 +100,23 @@ class WhisperProvider(BaseTranscriptionProvider):
             ),
         )
 
-        audio_segments = []
-        for idx, segment in enumerate(segments_iter):
-            start_ms = segment.start * 1000
-            end_ms = segment.end * 1000
-            audio_segments.append(
-                AudioSegment(
-                    index=idx,
-                    start_ms=start_ms,
-                    end_ms=end_ms,
-                    duration_ms=end_ms - start_ms,
-                    original_text=segment.text.strip(),
-                )
+        audio_segments = self._collect_segments(segments_iter)
+
+        # Fallback: If VAD filter produced 0 segments, retry without VAD filter
+        if not audio_segments:
+            log.info("whisper_vad_filtered_all", message="Retrying transcription without VAD filter")
+            segments_iter, info = model.transcribe(
+                str(audio_path),
+                language=source_language if source_language != "auto" else None,
+                beam_size=5,
+                word_timestamps=False,
+                vad_filter=False,
             )
+            audio_segments = self._collect_segments(segments_iter)
+
+        if not audio_segments:
+            log.warning("whisper_no_speech_detected", audio_path=str(audio_path))
+            raise TranscriptionError("No speech detected in input audio/video file.")
 
         total_duration_ms = audio_segments[-1].end_ms if audio_segments else 0.0
 
@@ -130,6 +134,27 @@ class WhisperProvider(BaseTranscriptionProvider):
             total_duration_ms=total_duration_ms,
             provider_used=TranscriptionProvider.WHISPER,
         )
+
+    @staticmethod
+    def _collect_segments(segments_iter) -> list[AudioSegment]:
+        """Collect non-empty AudioSegments from faster-whisper iterator."""
+        audio_segments = []
+        for segment in segments_iter:
+            text = segment.text.strip()
+            if not text:
+                continue
+            start_ms = segment.start * 1000
+            end_ms = segment.end * 1000
+            audio_segments.append(
+                AudioSegment(
+                    index=len(audio_segments),
+                    start_ms=start_ms,
+                    end_ms=end_ms,
+                    duration_ms=end_ms - start_ms,
+                    original_text=text,
+                )
+            )
+        return audio_segments
 
     async def health_check(self) -> bool:
         """Check if Whisper model can be loaded."""
