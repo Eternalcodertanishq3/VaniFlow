@@ -3,11 +3,12 @@ FastAPI application with proper lifespan management.
 """
 
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 import structlog
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 
 from api.middleware.auth_middleware import APIKeyAuthMiddleware
 from api.middleware.logging_middleware import LoggingMiddleware
@@ -48,6 +49,17 @@ app.include_router(jobs.router, prefix="/jobs", tags=["jobs"])
 app.include_router(voices.router, prefix="/voices", tags=["voices"])
 app.include_router(metrics.router, tags=["observability"])
 app.include_router(stats.router, tags=["cost-optimization"])
+
+UI_INDEX_PATH = Path(__file__).resolve().parent.parent / "ui" / "index.html"
+
+
+@app.get("/", include_in_schema=False)
+@app.get("/ui", include_in_schema=False)
+async def serve_ui():
+    """Serve single-page HTML web interface."""
+    if UI_INDEX_PATH.exists():
+        return FileResponse(str(UI_INDEX_PATH))
+    return JSONResponse({"message": "VaaniFlow API v2.0.0. UI not found."})
 
 
 @app.exception_handler(Exception)

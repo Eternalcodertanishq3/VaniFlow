@@ -14,7 +14,7 @@ from vaaniflow.config import settings
 log = structlog.get_logger(__name__)
 
 # Paths that bypass authentication
-AUTH_EXEMPT_PREFIXES = ("/health", "/metrics")
+AUTH_EXEMPT_PREFIXES = ("/health", "/metrics", "/docs", "/openapi.json", "/ui", "/")
 
 
 class APIKeyAuthMiddleware(BaseHTTPMiddleware):
