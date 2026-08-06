@@ -60,6 +60,7 @@ class Settings(BaseSettings):
         default="ai4bharat/indicwav2vec_v1_hindi",
         alias="EMOTION_MODEL_INDIC",
     )
+    emotion_device: str = Field(default="auto", alias="EMOTION_DEVICE")
     qc_enabled: bool = Field(default=True, alias="QC_ENABLED")
     qc_max_silence_ratio: float = Field(default=0.7, alias="QC_MAX_SILENCE_RATIO")
     qc_max_length_ratio: float = Field(default=3.0, alias="QC_MAX_LENGTH_RATIO")

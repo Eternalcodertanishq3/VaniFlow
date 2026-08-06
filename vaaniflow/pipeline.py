@@ -103,6 +103,7 @@ class VaaniFlowPipeline:
             fallback_to_rule_based=True,
             english_model_id=settings.emotion_model_english,
             indic_model_id=settings.emotion_model_indic,
+            device=settings.emotion_device,
         )
         self.back_translation_scorer = BackTranslationQualityScorer(
             threshold=settings.back_translation_threshold,
@@ -264,10 +265,10 @@ class VaaniFlowPipeline:
                     vtt_path = self.subtitle_generator.generate_vtt(tts_result.segments, job.job_id)
                     log.info("subtitles_generated", srt=str(srt_path), vtt=str(vtt_path))
 
-            # Stage 7: Lip-sync manifest export (Phase 3)
+            # Stage 7: Lip-sync manifest & video export (Phase 3)
             if settings.lipsync_export_enabled:
                 with PIPELINE_STAGE_DURATION.labels("lipsync_export").time():
-                    await self.lipsync_exporter.export(
+                    lipsync_res = await self.lipsync_exporter.export(
                         segments=tts_result.segments,
                         job_id=job.job_id,
                         dubbed_audio_path=output_path,
@@ -276,6 +277,15 @@ class VaaniFlowPipeline:
                         total_duration_ms=transcription.total_duration_ms,
                         original_video_path=input_path,
                     )
+                    if lipsync_res and lipsync_res.suffix.lower() in {
+                        ".mp4",
+                        ".webm",
+                        ".mkv",
+                        ".mov",
+                        ".avi",
+                    }:
+                        output_path = lipsync_res
+                        log.info("lipsync_output_connected", output=str(output_path))
 
             # Record cost metrics
             cost_tracker.record_segments(len(tts_result.segments))

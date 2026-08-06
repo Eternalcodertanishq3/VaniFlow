@@ -1,42 +1,29 @@
-# VaaniFlow 100x Enhancement Plan
+# VaaniFlow 100x Architectural Roadmap
 
 ## 1. Multi-Modal Dubbing & Lip Sync
 - **Integration:** MuseTalk (MIT License).
-- **Status:** ✅ **Implemented** — `vaaniflow/lipsync/` features `MuseTalkGenerator` for MIT-licensed neural lip-sync generation, plus JSON alignment manifest export with per-segment timestamps, emotion labels, and speaking rates. Toggle: `LIPSYNC_EXPORT_ENABLED=true`.
-- **Next step:** Install MuseTalk checkpoint (`musetalk_model.pth`) for production video rendering.
+- **Status:** ✅ **Implemented & Connected** — `vaaniflow/lipsync/` features `MuseTalkGenerator` for MIT-licensed neural lip-sync generation. The pipeline automatically reassigns `output_path` to the generated lip-synced video deliverable when `LIPSYNC_EXPORT_ENABLED=true`.
 
-## 2. Advanced Multi-Speaker Recognition & Diarization
-- **Integration:** Pyannote.audio.
-- **Description:** Currently assumes single speaker or doesn't explicitly handle speaker mapping. We need to diarize the audio, assign unique voices to different speakers, and synthesize with distinct TTS models for each speaker.
+## 2. Advanced Multi-Speaker Diarization (Theatrical Long-Form)
+- **Integration:** `pyannote/speaker-diarization-3.1` or NVIDIA NeMo Sortformer.
+- **Description:** Segment audio by `speaker_id` (`SPEAKER_00`, `SPEAKER_01`) across 2-hour runtimes so character voice assignments stay consistent from scene 1 through scene 40.
 
-## 3. High-Quality Voice Cloning (Zero-Shot)
-- **Integration:** Coqui TTS / XTTSv2 or Bark.
-- **Description:** In addition to Sarvam and ElevenLabs, integrate local open-source voice cloning to exactly clone the original speaker's voice in the target language.
+## 3. Indic Zero-Shot Voice Cloning
+- **Integration:** AI4Bharat IndicF5 / Gnani.ai / Fish Speech V1.5.
+- **Description:** Extract speaker reference audio from diarized segments to zero-shot clone the actor's natural voice into Indic languages while preserving warmth, cadence, and emotion.
 
-## 4. Background Music and Sound Effects Isolation (Stem Separation)
-- **Integration:** Spleeter or Demucs.
-- **Description:** Phase 2 includes spectral subtraction, but true stem separation (Demucs) splits vocals, drums, bass, and other elements perfectly to recreate the ambient layer flawlessly.
+## 4. Segment-Level Task Queue & Resumability
+- **Integration:** Celery / Ray / ARQ with Redis checkpointing.
+- **Description:** Replace single-coroutine pipeline runs with segment-checkpointed task workflows. If a 2,000-segment movie job fails at segment 1,800, execution resumes from the checkpoint rather than restarting from zero.
 
-## 5. Streaming and Real-Time Dubbing
-- **Integration:** WebRTC & FastAPI WebSockets.
-- **Description:** Move beyond file-upload-based processing to allow real-time streaming translation for live streams, meetings, or live video feeds.
+## 5. Pacing, Duration Drift & Scene-Cut Re-Anchoring
+- **Integration:** FFmpeg time-stretching + Scene-cut detection.
+- **Description:** Prevent small per-segment duration mismatches from compounding across a 90+ minute film by re-anchoring speech timing at major scene transitions.
 
-## 6. SRT/VTT Subtitle Generation & Video Hardcoding
-- **Integration:** FFmpeg Subtitle Filters.
-- **Description:** Provide automatically translated subtitle files, and allow an endpoint to burn these subtitles directly onto the output video.
+## 6. Human-in-the-Loop Broadcast QC Triage
+- **Integration:** QualityController + Review Dashboard.
+- **Description:** Surface the lowest-confidence 5–10% of segments (low BLEU/embedding similarity or steep camera angles) for human audio/video editor sign-off before final broadcast delivery.
 
-## 7. Cloud-Native Scalability & Kubernetes Orchestration
-- **Integration:** Celery / RabbitMQ & Kubernetes.
-- **Description:** Replace basic asyncio background tasks with Celery distributed workers, auto-scaling based on the queue size.
-
-## 8. Frontend Web Interface & Dashboard
-- **Integration:** React.js / Next.js.
-- **Description:** A proper UI to upload videos, view progress, manually edit translations before synthesis (Human-in-the-Loop), and playback the generated video.
-
-## 9. Comprehensive Quality Assurance Dashboard
-- **Integration:** LangSmith or custom LLM-as-a-judge.
-- **Description:** More than just BLEU scores, use LLMs to judge translation naturalness, cultural context preservation, and timing accuracy.
-
-## 10. Advanced Audio Mastering
-- **Integration:** FFmpeg advanced filters (compression, EQ) or VST plugins.
-- **Description:** Master the final stitched audio to industry loudness standards (-14 LUFS for streaming) and apply dynamic range compression to blend vocals naturally.
+## 7. Device Acceleration & Cloud Scaling
+- **Integration:** CUDA auto-detection (`EMOTION_DEVICE=auto/cuda`) + S3/GCS blob storage.
+- **Status:** ✅ **Implemented** — Neural emotion models auto-detect GPU/CUDA availability for high-throughput inference.

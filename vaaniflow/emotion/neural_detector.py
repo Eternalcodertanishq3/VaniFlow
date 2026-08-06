@@ -93,11 +93,13 @@ class NeuralEmotionPreserver:
         fallback_to_rule_based: bool = True,
         english_model_id: Optional[str] = None,
         indic_model_id: Optional[str] = None,
+        device: Optional[str] = None,
     ):
         self.enabled = enabled
         self.fallback_to_rule_based = fallback_to_rule_based
         self._english_model_id = english_model_id or _ENGLISH_MODEL_ID
         self._indic_model_id = indic_model_id or _INDIC_MODEL_ID
+        self.device = device or "auto"
 
         # Separate classifier instances — lazy loaded per language group
         self._english_classifier: Any = None
@@ -122,6 +124,19 @@ class NeuralEmotionPreserver:
             and importlib.util.find_spec("torch") is not None
         )
 
+    def _resolve_device(self) -> int:
+        """Resolve device parameter to HuggingFace pipeline index: 0 for GPU, -1 for CPU."""
+        if self.device == "cpu":
+            return -1
+        if self.device in ("cuda", "gpu"):
+            return 0
+        try:
+            import torch
+
+            return 0 if torch.cuda.is_available() else -1
+        except Exception:
+            return -1
+
     def _load_english_classifier(self) -> Any:
         """Lazy-load the wav2vec2 English emotion classifier."""
         if self._english_load_attempted:
@@ -141,12 +156,17 @@ class NeuralEmotionPreserver:
         try:
             from transformers import pipeline
 
+            target_device = self._resolve_device()
             self._english_classifier = pipeline(
                 "audio-classification",
                 model=self._english_model_id,
-                device=-1,  # CPU — safe default
+                device=target_device,
             )
-            log.info("neural_emotion_english_model_loaded", model=self._english_model_id)
+            log.info(
+                "neural_emotion_english_model_loaded",
+                model=self._english_model_id,
+                device="cuda" if target_device >= 0 else "cpu",
+            )
         except Exception as e:
             log.warning(
                 "neural_emotion_english_model_load_failed",
@@ -182,9 +202,16 @@ class NeuralEmotionPreserver:
         try:
             from transformers import Wav2Vec2Model
 
+            target_device = self._resolve_device()
             self._indic_model = Wav2Vec2Model.from_pretrained(self._indic_model_id)
+            if target_device >= 0:
+                self._indic_model.to("cuda")
             self._indic_model.eval()
-            log.info("neural_emotion_indic_model_loaded", model=self._indic_model_id)
+            log.info(
+                "neural_emotion_indic_model_loaded",
+                model=self._indic_model_id,
+                device="cuda" if target_device >= 0 else "cpu",
+            )
         except Exception as e:
             log.warning(
                 "neural_emotion_indic_model_load_failed",
