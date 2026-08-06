@@ -28,8 +28,8 @@ if %errorlevel% neq 0 (
 )
 
 :: 5. Open Browser automatically after 3 seconds
-echo [*] Starting server at http://localhost:8000 ...
-start "" "http://localhost:8000/docs"
+echo [*] Starting server at http://localhost:8000/ui ...
+start "" "http://localhost:8000/ui"
 
 :: 6. Launch FastAPI Uvicorn Server
 python -m uvicorn api.main:app --reload --port 8000

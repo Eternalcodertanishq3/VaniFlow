@@ -29,8 +29,8 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 # 5. Open browser
-Write-Host "[*] Starting server at http://localhost:8000 ..." -ForegroundColor Green
-Start-Process "http://localhost:8000/docs"
+Write-Host "[*] Starting server at http://localhost:8000/ui ..." -ForegroundColor Green
+Start-Process "http://localhost:8000/ui"
 
 # 6. Run server
 python -m uvicorn api.main:app --reload --port 8000
