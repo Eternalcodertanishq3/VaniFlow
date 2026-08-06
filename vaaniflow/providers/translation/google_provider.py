@@ -78,10 +78,8 @@ class GoogleTranslationProvider(BaseTranslationProvider):
         )
 
         if not self.api_key:
-            raise AuthenticationError(
-                self.provider_name,
-                "Google Translate API key not configured. Set GOOGLE_TRANSLATE_API_KEY environment variable.",
-            )
+            log.info("google_translate_using_free_endpoint", text_length=len(text))
+            return await self._translate_free_gtx(text, source, target)
 
         params = {
             "key": self.api_key,
@@ -150,10 +148,9 @@ class GoogleTranslationProvider(BaseTranslationProvider):
         )
 
         if not self.api_key:
-            raise AuthenticationError(
-                self.provider_name,
-                "Google Translate API key not configured. Set GOOGLE_TRANSLATE_API_KEY environment variable.",
-            )
+            log.info("google_translate_batch_using_free_endpoint", count=len(texts))
+            tasks = [self._translate_free_gtx(text, source, target) for text in texts]
+            return await asyncio.gather(*tasks)
 
         params = {
             "key": self.api_key,
@@ -186,9 +183,28 @@ class GoogleTranslationProvider(BaseTranslationProvider):
                 f"Batch request timed out after {settings.provider_timeout_seconds}s",
             )
 
+    async def _translate_free_gtx(self, text: str, source: str, target: str) -> str:
+        """Free Google Translate endpoint — zero API keys required."""
+        url = "https://translate.googleapis.com/translate_a/single"
+        params = {
+            "client": "gtx",
+            "sl": source,
+            "tl": target,
+            "dt": "t",
+            "q": text,
+        }
+        session = await self._get_session()
+        try:
+            async with session.get(url, params=params) as resp:
+                resp.raise_for_status()
+                data = await resp.json()
+                translated_text = "".join(item[0] for item in data[0] if item and item[0])
+                return translated_text or text
+        except Exception as e:
+            log.warning("free_google_translate_failed", error=str(e))
+            raise TranslationError(f"Free Google translation failed: {e}") from e
+
     async def health_check(self) -> bool:
-        if not self.api_key:
-            return False
         try:
             result = await self.translate("hello", "en", "hi")
             return bool(result)
