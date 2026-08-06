@@ -368,7 +368,14 @@ class VaaniFlowPipeline:
                     primary=provider.provider_name,
                     error=str(e),
                 )
-                fallback_trans = self.translation_providers[TranslationProvider.GOOGLE]
+                fallback_enum = (
+                    TranslationProvider.SARVAM
+                    if config.translation_provider == TranslationProvider.GOOGLE
+                    else TranslationProvider.GOOGLE
+                )
+                if fallback_enum == TranslationProvider.GOOGLE and not settings.google_translate_api_key:
+                    raise e
+                fallback_trans = self.translation_providers[fallback_enum]
                 translated = await fallback_trans.translate_batch(
                     list(texts),
                     effective_source,

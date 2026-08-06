@@ -55,11 +55,10 @@ async def create_dubbing_job(
 
     chosen_translation_provider = translation_provider
     if chosen_translation_provider is None:
-        chosen_translation_provider = (
-            TranslationProvider.SARVAM
-            if tts_provider == TTSProvider.SARVAM
-            else TranslationProvider.GOOGLE
-        )
+        if tts_provider == TTSProvider.SARVAM or not settings.google_translate_api_key:
+            chosen_translation_provider = TranslationProvider.SARVAM
+        else:
+            chosen_translation_provider = TranslationProvider.GOOGLE
 
     # Build config from form data
     config = DubbingJobConfig(
