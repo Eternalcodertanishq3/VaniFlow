@@ -81,11 +81,13 @@ def mock_redis_cache():
         yield mock_get, mock_set
 
 
-@pytest_asyncio.fixture
-async def async_client():
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        yield client
+from fastapi.testclient import TestClient
+
+
+@pytest.fixture
+def api_client():
+    """TestClient fixture for FastAPI endpoints."""
+    return TestClient(app)
 
 
 @pytest.fixture
