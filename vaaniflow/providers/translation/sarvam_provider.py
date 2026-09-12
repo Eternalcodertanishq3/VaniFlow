@@ -99,8 +99,17 @@ class SarvamTranslationProvider(BaseTranslationProvider):
             else target_language
         )
 
+        if not text or not text.strip():
+            return text
+
+        if source == target:
+            return text
+
         source_sarvam = SARVAM_LANG_MAP.get(source, source)
         target_sarvam = SARVAM_LANG_MAP.get(target, target)
+
+        if source_sarvam == target_sarvam:
+            return text
 
         payload = {
             "input": text,
@@ -125,6 +134,10 @@ class SarvamTranslationProvider(BaseTranslationProvider):
                     raise ProviderServerError(
                         self.provider_name, f"Sarvam server error: {resp.status}"
                     )
+                if resp.status == 400:
+                    err_msg = await resp.text()
+                    log.warning("sarvam_translate_bad_request", error=err_msg, source=source, target=target)
+                    raise TranslationError(f"Sarvam translation bad request (HTTP 400): {err_msg}")
 
                 resp.raise_for_status()
                 data = await resp.json()
@@ -159,6 +172,8 @@ class SarvamTranslationProvider(BaseTranslationProvider):
         Sarvam API is single-text only.
         Translate each text concurrently using asyncio.gather.
         """
+        if source_language == target_language:
+            return texts
         tasks = [self.translate(text, source_language, target_language, **kwargs) for text in texts]
         return await asyncio.gather(*tasks)
 

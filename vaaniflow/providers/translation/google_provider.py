@@ -77,6 +77,12 @@ class GoogleTranslationProvider(BaseTranslationProvider):
             else target_language
         )
 
+        if not text or not text.strip():
+            return text
+
+        if source == target:
+            return text
+
         if not self.api_key:
             log.info("google_translate_using_free_endpoint", text_length=len(text))
             return await self._translate_free_gtx(text, source, target)
@@ -146,6 +152,9 @@ class GoogleTranslationProvider(BaseTranslationProvider):
             if isinstance(target_language, SupportedLanguage)
             else target_language
         )
+
+        if source == target:
+            return texts
 
         if not self.api_key:
             log.info("google_translate_batch_using_free_endpoint", count=len(texts))
