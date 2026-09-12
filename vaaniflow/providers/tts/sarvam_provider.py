@@ -36,19 +36,29 @@ SARVAM_SUPPORTED_LANGUAGES = {
     "en",
 }
 
-# Default Sarvam voice per language — diversified across available voices
+# Default Sarvam voice per language (bulbul:v3 compatible)
 SARVAM_DEFAULT_VOICES = {
-    "hi": "arvind",  # Male Hindi
-    "bn": "arvind",  # Male Bengali
-    "te": "meera",  # Female Telugu
-    "mr": "arvind",  # Male Marathi
-    "ta": "meera",  # Female Tamil
-    "gu": "arvind",  # Male Gujarati
-    "kn": "meera",  # Female Kannada
-    "ml": "meera",  # Female Malayalam
-    "pa": "arvind",  # Male Punjabi
-    "or": "arvind",  # Male Odia
-    "en": "arvind",  # Male English
+    "hi": "aditya",  # Male Hindi
+    "bn": "roopa",   # Female Bengali
+    "te": "kavitha", # Female Telugu
+    "mr": "soham",   # Male Marathi
+    "ta": "vijay",   # Male Tamil
+    "gu": "pooja",   # Female Gujarati
+    "kn": "chetan",  # Male Kannada
+    "ml": "kavitha", # Female Malayalam
+    "pa": "anand",   # Male Punjabi
+    "or": "aditya",  # Male Odia
+    "en": "aditya",  # Male English
+}
+
+# Map catalog/legacy names to valid bulbul:v3 speakers
+SARVAM_VOICE_MAP = {
+    "arvind": "aditya",
+    "amartya": "aditya",
+    "ratan": "ratan",
+    "meera": "simran",
+    "kavya": "kavya",
+    "anvita": "priya",
 }
 
 # Sarvam language code mapping
@@ -98,7 +108,8 @@ class SarvamTTSProvider(BaseTTSProvider):
         """Synthesize speech using Sarvam AI TTS API."""
         lang_code = request.language
         sarvam_lang = SARVAM_LANG_MAP.get(lang_code, lang_code)
-        voice = request.voice_id or SARVAM_DEFAULT_VOICES.get(lang_code, "arvind")
+        raw_voice = request.voice_id or SARVAM_DEFAULT_VOICES.get(lang_code, "aditya")
+        voice = SARVAM_VOICE_MAP.get(raw_voice, raw_voice)
 
         payload = {
             "inputs": [request.text],
